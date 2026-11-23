@@ -1,0 +1,19 @@
+# Archivos temporales de BlueJ y compilación
+*.class
+*.ctxt
+*.bak
+*.log
+
+# Archivo de guardado y logs
+progress.dat
+test_pvp_save.tmp
+test_pvm_save.tmp
+headsoccer.log
+
+# IDEs y compilados bin
+.idea/
+*.iml
+.vscode/
+bin/
+*.lck
+*.tmp

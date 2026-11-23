@@ -1,0 +1,439 @@
+package domain;
+
+import java.awt.Color;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+
+/** Main game model coordinating the match, players, ball, field, and persistence. */
+public class HeadSoccer implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    public static final int MODE_PVP = 0;
+    public static final int MODE_PVM = 1;
+
+    public static final int MATCH_BY_TIME = 0;
+    public static final int MATCH_BY_GOALS = 1;
+
+    public static final int POINTS_WINNER = 100;
+    public static final int POINTS_LOSER = 25;
+
+    private static final int GOAL_FREEZE_TICKS = 75;
+
+    private final Player player1;
+    private final Player player2;
+    private final Ball ball;
+    private final Field field;
+    private final Scoreboard scoreboard;
+
+    private final int modality;
+    private final int matchType;
+    private final int targetGoals;
+
+    private int remainingTime;
+    private boolean suddenDeath;
+    private boolean running;
+    private boolean paused;
+    private boolean matchFinished;
+    private boolean pointsAwarded;
+    private int goalFreezeTicks;
+    private String lastGoalScorer;
+    private int lastPointsP1;
+    private int lastPointsP2;
+
+    /** Creates a standard PvP match with default settings. */
+    public HeadSoccer(int fieldWidth, int fieldHeight) {
+        this(fieldWidth, fieldHeight, MODE_PVP, null,
+                Power.COUNTRY_KOREA, Power.COUNTRY_CAMEROON,
+                MATCH_BY_TIME, 3, 5);
+    }
+
+    /** Creates a match with full game and player configuration. */
+    public HeadSoccer(int fieldWidth, int fieldHeight, int modality, String machineProfile,
+                      String p1Country, String p2Country, int matchType, int minutes, int targetGoals) {
+        this.field = new Field(fieldWidth, fieldHeight);
+        this.modality = (modality == MODE_PVM) ? MODE_PVM : MODE_PVP;
+        this.matchType = (matchType == MATCH_BY_GOALS) ? MATCH_BY_GOALS : MATCH_BY_TIME;
+        this.targetGoals = Math.max(1, targetGoals);
+
+        int groundY = field.getGroundY();
+        int leftGoalLine = field.getLeftGoalLine();
+        int rightGoalLine = field.getRightGoalLine();
+
+        Power power1 = Power.createForCountry(p1Country);
+        Power power2 = Power.createForCountry(p2Country);
+
+        double p1x = leftGoalLine + 120.0;
+        double p2x = rightGoalLine - 120.0;
+        double py = groundY - Player.HEAD_RADIUS;
+
+        this.player1 = new Player(p1x, py, new Color(40, 100, 220), "Jugador 1", power1, 1);
+        if (this.modality == MODE_PVM) {
+            String prof = MachinePlayer.PROFILE_TORPE;
+            this.player2 = new MachinePlayer(p2x, py, new Color(210, 50, 50),
+                    "Máquina (" + prof + ")", power2, -1, prof);
+        } else {
+            this.player2 = new Player(p2x, py, new Color(210, 50, 50), "Jugador 2", power2, -1);
+        }
+
+        this.ball = new Ball(fieldWidth / 2.0, groundY - Ball.RADIUS * 4);
+
+        this.scoreboard = new Scoreboard();
+        this.remainingTime = Math.max(10, minutes * 60);
+        this.suddenDeath = false;
+        this.running = false;
+        this.paused = false;
+        this.matchFinished = false;
+        this.pointsAwarded = false;
+        this.goalFreezeTicks = 0;
+        this.lastGoalScorer = null;
+        this.lastPointsP1 = 0;
+        this.lastPointsP2 = 0;
+    }
+
+    /** Validates match configuration parameters. */
+    public static void validateConfiguration(int fieldWidth, int fieldHeight, int minutes, int targetGoals)
+            throws HeadSoccerException {
+        if (fieldWidth < 600 || fieldHeight < 400 || minutes <= 0 || targetGoals <= 0) {
+            throw new HeadSoccerException(HeadSoccerException.INVALID_CONFIG);
+        }
+    }
+
+    /** Starts the game loop. */
+    public void start() {
+        running = true;
+        paused = false;
+        matchFinished = false;
+    }
+
+    /** Pauses or unpauses the game. */
+    public void setPaused(boolean pause) {
+        this.paused = pause;
+    }
+
+    /** Advances game physics by one tick (~60 FPS). */
+    public void update() {
+        if (!running || paused) return;
+
+        if (goalFreezeTicks > 0) {
+            goalFreezeTicks--;
+            if (goalFreezeTicks == 0) {
+                if (checkPostGoalVictory()) {
+                    return;
+                }
+                resetAfterGoal();
+            }
+            return;
+        }
+
+        if (player2 instanceof MachinePlayer) {
+            ((MachinePlayer) player2).decideAction(ball, player1, field, scoreboard);
+        }
+
+        int leftGoalLine = field.getLeftGoalLine();
+        int rightGoalLine = field.getRightGoalLine();
+
+        player1.update(leftGoalLine + Player.HEAD_RADIUS, rightGoalLine - Player.HEAD_RADIUS, field.getGroundY());
+        player2.update(leftGoalLine + Player.HEAD_RADIUS, rightGoalLine - Player.HEAD_RADIUS, field.getGroundY());
+
+        resolvePlayerPlayerCollision();
+
+        ball.move(field);
+
+        resolvePlayerBallCollision(player1, player2);
+        resolvePlayerBallCollision(player2, player1);
+
+        checkGoals();
+    }
+
+    /** Decrements the match clock and checks end-of-time conditions. */
+    public void tickSecond() {
+        if (!running || paused) return;
+        if (matchType != MATCH_BY_TIME || suddenDeath) return;
+
+        if (remainingTime > 0) {
+            remainingTime--;
+        }
+        if (remainingTime == 0) {
+            if (scoreboard.getScorePlayer1() == scoreboard.getScorePlayer2()) {
+                suddenDeath = true;
+            } else {
+                finish();
+            }
+        }
+    }
+
+    /** Prevents horizontal overlap between both players. */
+    private void resolvePlayerPlayerCollision() {
+        double minDist = Player.HEAD_RADIUS * 2;
+        double dx = player2.getPositionX() - player1.getPositionX();
+        double dy = Math.abs(player2.getPositionY() - player1.getPositionY());
+        if (Math.abs(dx) < minDist && dy < Player.HEAD_RADIUS * 1.8) {
+            double sign = (dx >= 0) ? 1.0 : -1.0;
+            double overlap = minDist - Math.abs(dx);
+            player1.setPositionX(player1.getPositionX() - sign * overlap / 2.0);
+            player2.setPositionX(player2.getPositionX() + sign * overlap / 2.0);
+        }
+    }
+
+    /** Resolves head/foot ball collision and active power shot effects. */
+    private void resolvePlayerBallCollision(Player player, Player opponent) {
+        double bx = ball.getPositionX();
+        double by = ball.getPositionY();
+        double px = player.getPositionX();
+        double py = player.getPositionY();
+
+        double cx = px;
+        double cy = py;
+        double cr = Player.HEAD_RADIUS;
+        double closestDistSq = (bx - px) * (bx - px) + (by - py) * (by - py);
+
+        double fx = player.getFootX();
+        double fy = player.getFootY();
+        double footDistSq = (bx - fx) * (bx - fx) + (by - fy) * (by - fy);
+        if (footDistSq < closestDistSq) {
+            cx = fx;
+            cy = fy;
+            cr = Player.FOOT_RADIUS;
+            closestDistSq = footDistSq;
+        }
+
+        double minDist = cr + Ball.RADIUS;
+        if (closestDistSq < minDist * minDist && closestDistSq > 0.0001) {
+            double dist = Math.sqrt(closestDistSq);
+            double nx = (bx - cx) / dist;
+            double ny = (by - cy) / dist;
+
+            ball.setPosition(bx + nx * (minDist - dist), by + ny * (minDist - dist));
+            applyPowerShotHit(player, opponent);
+            if (player.getPower().isActive()) {
+                player.executePowerShot(ball);
+                return;
+            }
+            applyBallBounceImpulse(player, nx, ny);
+        }
+    }
+
+    /** Applies active power shot damage and status effect when hitting the opponent. */
+    private void applyPowerShotHit(Player player, Player opponent) {
+        if (ball.hasActivePowerShot() && ball.getPowerShotOwner() == opponent) {
+            Power shot = ball.getActivePowerShot();
+            player.takeDamage(shot.calculateDamage(opponent.getKickMultiplier()));
+            int pushTowardOwnGoal = (player == player1) ? -1 : 1;
+            player.applyEffect(shot.getEffectName(), shot.getEffectDurationTicks(), pushTowardOwnGoal);
+            ball.clearPowerShotImpact();
+        }
+    }
+
+    /** Computes and applies elastic collision impulse between player and ball. */
+    private void applyBallBounceImpulse(Player player, double nx, double ny) {
+        double relVx = ball.getVelocityX() - player.getVelocityX();
+        double relVy = ball.getVelocityY() - player.getVelocityY();
+        double velAlongNormal = relVx * nx + relVy * ny;
+
+        if (velAlongNormal < 0) {
+            double impulseMag = -1.55 * velAlongNormal;
+            double newVx = ball.getVelocityX() + impulseMag * nx;
+            double newVy = ball.getVelocityY() + impulseMag * ny;
+            if (ny < -0.3 && newVy > -3.5) {
+                newVy = -3.8;
+            }
+            ball.setVelocity(newVx, newVy);
+        } else if (ny < -0.5 && ball.getVelocityY() > -2.0) {
+            ball.setVelocity(ball.getVelocityX(), -3.0);
+        }
+    }
+
+    /** Checks if the ball entered either goal and updates scores and freeze state. */
+    private void checkGoals() {
+        if (goalFreezeTicks > 0) return;
+
+        if (field.getLeftGoal().containsBall(ball)) {
+            scoreboard.scoreGoalPlayer2();
+            player1.onGoalConceded();
+            goalFreezeTicks = GOAL_FREEZE_TICKS;
+            lastGoalScorer = player2.getName();
+            ball.clearAllPowerShotEffects();
+        } else if (field.getRightGoal().containsBall(ball)) {
+            scoreboard.scoreGoalPlayer1();
+            player2.onGoalConceded();
+            goalFreezeTicks = GOAL_FREEZE_TICKS;
+            lastGoalScorer = player1.getName();
+            ball.clearAllPowerShotEffects();
+        }
+    }
+
+    /** Checks post-goal victory conditions for sudden death or target-goal matches. */
+    private boolean checkPostGoalVictory() {
+        if (suddenDeath) {
+            finish();
+            return true;
+        }
+        if (matchType == MATCH_BY_GOALS) {
+            if (scoreboard.getScorePlayer1() >= targetGoals ||
+                scoreboard.getScorePlayer2() >= targetGoals) {
+                finish();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Resets players and ball to starting positions after a goal freeze. */
+    private void resetAfterGoal() {
+        player1.reset();
+        player2.reset();
+        ball.reset();
+        lastGoalScorer = null;
+    }
+
+    /** Finishes the match and awards player points. */
+    public void finish() {
+        running = false;
+        matchFinished = true;
+        awardMatchPoints();
+    }
+
+    /** Awards match points once when the game concludes. */
+    private void awardMatchPoints() {
+        if (pointsAwarded) return;
+        pointsAwarded = true;
+
+        int s1 = scoreboard.getScorePlayer1();
+        int s2 = scoreboard.getScorePlayer2();
+
+        if (s1 > s2) {
+            lastPointsP1 = POINTS_WINNER;
+            lastPointsP2 = POINTS_LOSER;
+        } else if (s2 > s1) {
+            lastPointsP1 = POINTS_LOSER;
+            lastPointsP2 = POINTS_WINNER;
+        } else {
+            lastPointsP1 = POINTS_LOSER;
+            lastPointsP2 = POINTS_LOSER;
+        }
+
+        player1.addPoints(lastPointsP1);
+        player2.addPoints(lastPointsP2);
+    }
+
+    /** Saves the complete state of this match to the given file. */
+    public void save(File file) throws HeadSoccerException {
+        if (file == null) {
+            throw new HeadSoccerException(HeadSoccerException.NULL_FILE);
+        }
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(this);
+        } catch (IOException e) {
+            Log.record(HeadSoccerException.SAVE_ERROR, e);
+            throw new HeadSoccerException(HeadSoccerException.SAVE_ERROR + " (" + e.getMessage() + ")", e);
+        }
+    }
+
+    /** Opens and restores a previously saved match from the given file. */
+    public static HeadSoccer open(File file) throws HeadSoccerException {
+        if (file == null) {
+            throw new HeadSoccerException(HeadSoccerException.NULL_FILE);
+        }
+        if (!file.exists()) {
+            throw new HeadSoccerException(HeadSoccerException.FILE_NOT_FOUND);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            Object obj = ois.readObject();
+            if (!(obj instanceof HeadSoccer)) {
+                throw new HeadSoccerException(HeadSoccerException.OPEN_ERROR);
+            }
+            return (HeadSoccer) obj;
+        } catch (HeadSoccerException e) {
+            throw e;
+        } catch (IOException | ClassNotFoundException | ClassCastException e) {
+            Log.record(HeadSoccerException.OPEN_ERROR, e);
+            throw new HeadSoccerException(HeadSoccerException.OPEN_ERROR + " (" + e.getMessage() + ")", e);
+        }
+    }
+
+    /** Saves both players' persistent progress (stats and points). */
+    public static void saveProgress(File file, int[] p1Progress, int[] p2Progress) throws HeadSoccerException {
+        if (file == null) {
+            throw new HeadSoccerException(HeadSoccerException.NULL_FILE);
+        }
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(new int[][]{p1Progress, p2Progress});
+        } catch (IOException e) {
+            Log.record("Error al guardar el progreso de los jugadores", e);
+            throw new HeadSoccerException(HeadSoccerException.SAVE_ERROR, e);
+        }
+    }
+
+    /** Loads both players' persistent progress (stats and points). */
+    public static int[][] loadProgress(File file) throws HeadSoccerException {
+        if (file == null || !file.exists()) {
+            throw new HeadSoccerException(HeadSoccerException.FILE_NOT_FOUND);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            Object obj = ois.readObject();
+            if (!(obj instanceof int[][])) {
+                throw new HeadSoccerException(HeadSoccerException.OPEN_ERROR);
+            }
+            return (int[][]) obj;
+        } catch (HeadSoccerException e) {
+            throw e;
+        } catch (IOException | ClassNotFoundException e) {
+            Log.record("Error al cargar el progreso de los jugadores", e);
+            throw new HeadSoccerException(HeadSoccerException.OPEN_ERROR, e);
+        }
+    }
+
+    /** @return true if the match is currently running */
+    public boolean isRunning() { return running; }
+
+    /** @return true if the match has finished */
+    public boolean isMatchFinished() { return matchFinished; }
+
+    /** @return true if the match is in sudden death overtime */
+    public boolean isSuddenDeath() { return suddenDeath; }
+
+    /** @return true while goal freeze countdown is active */
+    public boolean isGoalFreeze() { return goalFreezeTicks > 0; }
+
+    /** @return name of the player who scored the latest goal, or null */
+    public String getLastGoalScorer() { return lastGoalScorer; }
+
+    /** @return player 1 instance */
+    public Player getPlayer1() { return player1; }
+
+    /** @return player 2 (human or machine) instance */
+    public Player getPlayer2() { return player2; }
+
+    /** @return the soccer ball */
+    public Ball getBall() { return ball; }
+
+    /** @return the playing field */
+    public Field getField() { return field; }
+
+    /** @return the match scoreboard */
+    public Scoreboard getScoreboard() { return scoreboard; }
+
+    /** @return remaining match time in seconds */
+    public int getRemainingTime() { return remainingTime; }
+
+    /** @return match modality (PvP or PvM) */
+    public int getModality() { return modality; }
+
+    /** @return match type (by time or by goals) */
+    public int getMatchType() { return matchType; }
+
+    /** @return target goal limit for goal-based matches */
+    public int getTargetGoals() { return targetGoals; }
+
+    /** @return points awarded to player 1 at match end */
+    public int getLastPointsPlayer1() { return lastPointsP1; }
+
+    /** @return points awarded to player 2 at match end */
+    public int getLastPointsPlayer2() { return lastPointsP2; }
+}
