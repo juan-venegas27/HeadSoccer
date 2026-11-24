@@ -1,6 +1,6 @@
 package domain;
 
-/** Custom exception for DOPOSoccer domain and persistence errors. */
+/** Custom exception for the game domain and persistence errors. */
 public class HeadSoccerException extends Exception {
 
     private static final long serialVersionUID = 1L;
@@ -14,12 +14,19 @@ public class HeadSoccerException extends Exception {
     public static final String OPEN_ERROR = "Ocurrio un error al abrir el archivo de partida (formato incompatible o danado).";
     public static final String NULL_FILE = "El archivo especificado es nulo.";
 
-    /** Constructs an exception with the given message. */
+    /**
+     * Constructs an exception with the given message.
+     * @param message descriptive message
+     */
     public HeadSoccerException(String message) {
         super(message);
     }
 
-    /** Constructs an exception with the given message and cause. */
+    /**
+     * Constructs an exception with the given message and cause.
+     * @param message descriptive message
+     * @param cause underlying cause of the exception
+     */
     public HeadSoccerException(String message, Throwable cause) {
         super(message, cause);
     }

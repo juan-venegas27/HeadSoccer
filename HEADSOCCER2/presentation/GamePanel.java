@@ -25,7 +25,11 @@ public class GamePanel extends JPanel implements ActionListener {
     private PauseMenu pauseMenu;
     private boolean paused;
 
-    /** Creates the game panel for the given window and match controller. */
+    /**
+     * Creates the game panel for the given window and match controller.
+     * @param gui main application frame
+     * @param controller controller coordinating the match
+     */
     public GamePanel(HeadSoccerGUI gui, GameController controller) {
         this.gui = gui;
         this.controller = controller;
@@ -52,7 +56,10 @@ public class GamePanel extends JPanel implements ActionListener {
         add(pauseMenu);
 
         addComponentListener(new ComponentAdapter() {
-            /** Keeps the pause overlay sized to the panel. */
+            /**
+             * Keeps the pause overlay sized to the panel.
+             * @param e component resize event
+             */
             @Override
             public void componentResized(ComponentEvent e) {
                 pauseMenu.setBounds(0, 0, getWidth(), getHeight());
@@ -62,7 +69,9 @@ public class GamePanel extends JPanel implements ActionListener {
         setupKeyBindings();
     }
 
-    /** Configures keyboard input bindings for Player 1, Player 2, and pause controls. */
+    /**
+     * Configures keyboard input bindings for Player 1, Player 2, and pause controls.
+     */
     private void setupKeyBindings() {
         InputMap im = getInputMap(WHEN_IN_FOCUSED_WINDOW);
         ActionMap am = getActionMap();
@@ -107,7 +116,15 @@ public class GamePanel extends JPanel implements ActionListener {
                 e -> togglePause());
     }
 
-    /** Registers a key press or release binding that ignores gameplay input while paused. */
+    /**
+     * Registers a key press or release binding that ignores gameplay input while paused.
+     * @param im panel input map
+     * @param am panel action map
+     * @param keyCode KeyEvent virtual key code
+     * @param onRelease true to trigger on key release, false on key press
+     * @param name identifying name
+     * @param action action invoked when the key binding fires
+     */
     private void bindKey(InputMap im, ActionMap am, int keyCode,
                          boolean onRelease, String name, ActionListener action) {
         KeyStroke ks = onRelease
@@ -115,7 +132,10 @@ public class GamePanel extends JPanel implements ActionListener {
                 : KeyStroke.getKeyStroke(keyCode, 0, false);
         im.put(ks, name);
         am.put(name, new AbstractAction() {
-            /** Invokes the mapped action unless gameplay is paused. */
+            /**
+             * Invokes the mapped action unless gameplay is paused.
+             * @param e action event from timer or control
+             */
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (paused && keyCode != KeyEvent.VK_ESCAPE) {
@@ -126,7 +146,9 @@ public class GamePanel extends JPanel implements ActionListener {
         });
     }
 
-    /** Starts the game loop timers and the match model. */
+    /**
+     * Starts the game loop timers and the match model.
+     */
     public void startGame() {
         controller.startMatch();
         paused = false;
@@ -147,7 +169,9 @@ public class GamePanel extends JPanel implements ActionListener {
         gui.openEndGame();
     }
 
-    /** Toggles the paused state of the match. */
+    /**
+     * Toggles the paused state of the match.
+     */
     public void togglePause() {
         paused = !paused;
         controller.setPaused(paused);
@@ -162,7 +186,9 @@ public class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    /** Resumes the match from the pause menu. */
+    /**
+     * Resumes the match from the pause menu.
+     */
     public void resumeGame() {
         paused = false;
         controller.setPaused(false);
@@ -172,7 +198,10 @@ public class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    /** Advances simulation physics on each frame tick and repaints the field. */
+    /**
+     * Advances simulation physics on each frame tick and repaints the field.
+     * @param e action event from timer or control
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         controller.updateMatch();
@@ -183,7 +212,10 @@ public class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    /** Renders the stadium, goals, players, ball, and HUD overlay. */
+    /**
+     * Renders the stadium, goals, players, ball, and HUD overlay.
+     * @param g graphics context used for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -204,7 +236,11 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    /** Draws the stadium and grass field background image. */
+    /**
+     * Draws the stadium and grass field background image.
+     * @param g 2D graphics context used for drawing
+     * @param field playing field boundaries
+     */
     private void drawField(Graphics2D g, Field field) {
         int width = field.getWidth();
         int height = field.getHeight();
@@ -219,14 +255,24 @@ public class GamePanel extends JPanel implements ActionListener {
         g.drawImage(stadium, 0, groundY, width, height, 0, splitY, imgW, imgH, null);
     }
 
-    /** Draws both goal frames and nets. */
+    /**
+     * Draws both goal frames and nets.
+     * @param g 2D graphics context used for drawing
+     * @param field playing field boundaries
+     */
     private void drawGoals(Graphics2D g, Field field) {
         int groundY = field.getGroundY();
         drawSingleGoal(g, field.getLeftGoal(), groundY, true);
         drawSingleGoal(g, field.getRightGoal(), groundY, false);
     }
 
-    /** Draws a single goal post structure and mesh. */
+    /**
+     * Draws a single goal post structure and mesh.
+     * @param g 2D graphics context used for drawing
+     * @param goal goal instance to draw
+     * @param groundY vertical coordinate of the ground surface
+     * @param isLeft true for the left goal, false for the right goal
+     */
     private void drawSingleGoal(Graphics2D g, Goal goal, int groundY, boolean isLeft) {
         int x1 = goal.getPositionX();
         int x2 = goal.getPositionX() + goal.getWidth();
@@ -258,7 +304,11 @@ public class GamePanel extends JPanel implements ActionListener {
         g.setStroke(new BasicStroke(1));
     }
 
-    /** Draws a player's head sprite, kicking foot, aura, and active status indicator. */
+    /**
+     * Draws a player's head sprite, kicking foot, aura, and active status indicator.
+     * @param g 2D graphics context used for drawing
+     * @param player player instance to draw or update
+     */
     private void drawPlayer(Graphics2D g, Player player) {
         int cx = (int) player.getPositionX();
         int cy = (int) player.getPositionY();
@@ -298,7 +348,14 @@ public class GamePanel extends JPanel implements ActionListener {
         drawPlayerStatusEffect(g, player, cx, cy, hr);
     }
 
-    /** Draws stun or power effect indicators above the given player. */
+    /**
+     * Draws stun or power effect indicators above the given player.
+     * @param g 2D graphics context used for drawing
+     * @param player player instance to draw or update
+     * @param cx center horizontal coordinate
+     * @param cy center vertical coordinate
+     * @param hr player head radius in pixels
+     */
     private void drawPlayerStatusEffect(Graphics2D g, Player player, int cx, int cy, int hr) {
         if (player.isStunned()) {
             drawFloatingStatus(g, cx, cy - hr - 16, "★ ATURDIDO ★", Color.YELLOW);
@@ -319,7 +376,14 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    /** Draws a pill-shaped status badge above a player's head. */
+    /**
+     * Draws a pill-shaped status badge above a player's head.
+     * @param g 2D graphics context used for drawing
+     * @param cx center horizontal coordinate
+     * @param y vertical coordinate
+     * @param text text to display
+     * @param color player kit color
+     */
     private void drawFloatingStatus(Graphics2D g, int cx, int y, String text, Color color) {
         g.setFont(new Font("Arial", Font.BOLD, 11));
         FontMetrics fm = g.getFontMetrics();
@@ -330,7 +394,11 @@ public class GamePanel extends JPanel implements ActionListener {
         g.drawString(text, cx - w / 2, y);
     }
 
-    /** Returns the visual aura color associated with the given country. */
+    /**
+     * Returns the visual aura color associated with the given country.
+     * @param country selected country name
+     * @return visual aura color for the country
+     */
     private Color getAuraColor(String country) {
         if (country == null) return Color.CYAN;
         String lower = country.toLowerCase();
@@ -340,7 +408,11 @@ public class GamePanel extends JPanel implements ActionListener {
         return new Color(40, 170, 255);
     }
 
-    /** Draws the soccer ball and any identical Illusion decoy balls. */
+    /**
+     * Draws the soccer ball and any identical Illusion decoy balls.
+     * @param g 2D graphics context used for drawing
+     * @param ball active match ball
+     */
     private void drawBall(Graphics2D g, Ball ball) {
         int br = Ball.RADIUS;
         double bx = ball.getPositionX();
@@ -360,7 +432,11 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    /** Draws the top scoreboard bar, health/power bars, timer, and goal banner. */
+    /**
+     * Draws the top scoreboard bar, health/power bars, timer, and goal banner.
+     * @param g 2D graphics context used for drawing
+     * @param field playing field boundaries
+     */
     private void drawHUD(Graphics2D g, Field field) {
         int width = field.getWidth();
         Player p1 = model.getPlayer1();
@@ -392,7 +468,12 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    /** Draws the center scoreboard digits and clock or victory target label. */
+    /**
+     * Draws the center scoreboard digits and clock or victory target label.
+     * @param g 2D graphics context used for drawing
+     * @param centerX horizontal center coordinate of the scoreboard
+     * @param sb match scoreboard
+     */
     private void drawScoreAndClock(Graphics2D g, int centerX, Scoreboard sb) {
         String scoreText = sb.getScorePlayer1() + "  -  " + sb.getScorePlayer2();
         g.setFont(new Font("Arial", Font.BOLD, 28));
@@ -417,7 +498,11 @@ public class GamePanel extends JPanel implements ActionListener {
         g.drawString(clockText, centerX - cfm.stringWidth(clockText) / 2, 54);
     }
 
-    /** Draws the center goal celebration banner during post-goal freeze. */
+    /**
+     * Draws the center goal celebration banner during post-goal freeze.
+     * @param g 2D graphics context used for drawing
+     * @param width width in pixels
+     */
     private void drawGoalBanner(Graphics2D g, int width) {
         String goalText = "¡GOL!";
         if (model.getLastGoalScorer() != null) {
@@ -434,7 +519,14 @@ public class GamePanel extends JPanel implements ActionListener {
         g.drawString(goalText, gx, 125);
     }
 
-    /** Draws health and power charge bars for one player. */
+    /**
+     * Draws health and power charge bars for one player.
+     * @param g 2D graphics context used for drawing
+     * @param x horizontal coordinate
+     * @param y vertical coordinate
+     * @param w width in pixels
+     * @param p player instance
+     */
     private void drawPlayerBars(Graphics2D g, int x, int y, int w, Player p) {
         double hpRatio = Math.max(0, Math.min(1.0, p.getCurrentHealth() / p.getMaxHealth()));
         g.setColor(new Color(60, 20, 20));
@@ -462,12 +554,12 @@ public class GamePanel extends JPanel implements ActionListener {
         g.drawString(pwrText, x + 6, py + 10);
     }
 
-    /** @return the domain model associated with this panel */
+    /** Returns the domain model associated with this panel. */
     public HeadSoccer getModel() {
         return model;
     }
 
-    /** @return preferred panel dimensions matching the configured field size */
+    /** Returns preferred panel dimensions matching the configured field size. */
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(model.getField().getWidth(),

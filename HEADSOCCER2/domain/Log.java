@@ -13,16 +13,25 @@ public final class Log {
     private static final String LOG_FILE = "headsoccer.log";
     private static Logger logger;
 
-    /** Prevents instantiation of utility class. */
+    /**
+     * Prevents instantiation of utility class.
+     */
     private Log() {
     }
 
-    /** Records an exception in the log file. */
+    /**
+     * Records an exception in the log file.
+     * @param e exception to record
+     */
     public static void record(Exception e) {
         record(e != null ? e.getMessage() : "Unknown error", e);
     }
 
-    /** Records a message and exception in the log file. */
+    /**
+     * Records a message and exception in the log file.
+     * @param message descriptive message
+     * @param e exception to record
+     */
     public static synchronized void record(String message, Exception e) {
         try {
             Logger log = getLogger();
@@ -36,7 +45,11 @@ public final class Log {
         }
     }
 
-    /** Initializes and returns the shared file logger. */
+    /**
+     * Initializes and returns the shared file logger.
+     * @return shared logger configured to write to disk
+     * @throws IOException if the log file cannot be opened
+     */
     private static Logger getLogger() throws IOException {
         if (logger == null) {
             logger = Logger.getLogger(LOG_NAME);

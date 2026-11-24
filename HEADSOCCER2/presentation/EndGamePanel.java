@@ -21,7 +21,11 @@ public class EndGamePanel extends JPanel {
     private JButton menuButton;
     private JButton exitButton;
 
-    /** Creates the end-game panel for the finished match. */
+    /**
+     * Creates the end-game panel for the finished match.
+     * @param gui main application frame
+     * @param model match model instance
+     */
     public EndGamePanel(HeadSoccerGUI gui, HeadSoccer model) {
         this.gui = gui;
         this.model = model;
@@ -71,7 +75,10 @@ public class EndGamePanel extends JPanel {
         add(btnPanel, gbc);
     }
 
-    /** Paints the stadium background overlay behind the end-game panel. */
+    /**
+     * Paints the stadium background overlay behind the end-game panel.
+     * @param g graphics context used for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -81,7 +88,11 @@ public class EndGamePanel extends JPanel {
         g.fillRect(0, 0, getWidth(), getHeight());
     }
 
-    /** Creates a styled navigation button. */
+    /**
+     * Creates a styled navigation button.
+     * @param text text to display
+     * @return configured button component
+     */
     private JButton createButton(String text) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(200, 46));
@@ -93,7 +104,9 @@ public class EndGamePanel extends JPanel {
         return btn;
     }
 
-    /** Updates the displayed score, winner, and points. */
+    /**
+     * Updates the displayed score, winner, and points.
+     */
     public void refresh() {
         Scoreboard sb = model.getScoreboard();
         int s1 = sb.getScorePlayer1();

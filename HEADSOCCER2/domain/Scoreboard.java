@@ -10,7 +10,9 @@ public class Scoreboard implements Serializable {
     private int scorePlayer1;
     private int scorePlayer2;
 
-    /** Creates a Scoreboard with both scores set to zero. */
+    /**
+     * Creates a Scoreboard with both scores set to zero.
+     */
     public Scoreboard() {
         this.scorePlayer1 = 0;
         this.scorePlayer2 = 0;

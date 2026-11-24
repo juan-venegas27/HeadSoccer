@@ -13,7 +13,14 @@ public class Goal implements Serializable {
     private final int height;
     private final boolean leftGoal;
 
-    /** Creates a goal at the specified position and size. */
+    /**
+     * Creates a goal at the specified position and size.
+     * @param positionX horizontal position in pixels
+     * @param positionY vertical position in pixels
+     * @param width width in pixels
+     * @param height height in pixels
+     * @param leftGoal true for the left goal, false for the right goal
+     */
     public Goal(int positionX, int positionY, int width, int height, boolean leftGoal) {
         this.positionX = positionX;
         this.positionY = positionY;
@@ -22,7 +29,11 @@ public class Goal implements Serializable {
         this.leftGoal = leftGoal;
     }
 
-    /** @return true if the ball is completely inside the goal */
+    /**
+     * Returns true if the ball is completely inside the goal.
+     * @param ball active match ball
+     * @return true if the ball is inside the goal
+     */
     public boolean containsBall(Ball ball) {
         double bx = ball.getPositionX();
         double by = ball.getPositionY();
@@ -41,22 +52,22 @@ public class Goal implements Serializable {
         }
     }
 
-    /** @return left X coordinate of the goal */
+    /** Returns left X coordinate of the goal. */
     public int getPositionX() {
         return positionX;
     }
 
-    /** @return top Y coordinate of the goal (crossbar) */
+    /** Returns top Y coordinate of the goal (crossbar). */
     public int getPositionY() {
         return positionY;
     }
 
-    /** @return width (depth) of the goal opening */
+    /** Returns width (depth) of the goal opening. */
     public int getWidth() {
         return width;
     }
 
-    /** @return height of the goal opening */
+    /** Returns height of the goal opening. */
     public int getHeight() {
         return height;
     }

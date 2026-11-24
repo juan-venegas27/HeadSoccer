@@ -26,7 +26,11 @@ public class Field implements Serializable {
     private final Goal leftGoal;
     private final Goal rightGoal;
 
-    /** Creates a playing field with the given dimensions. */
+    /**
+     * Creates a playing field with the given dimensions.
+     * @param width width in pixels
+     * @param height height in pixels
+     */
     public Field(int width, int height) {
         this.width = width;
         this.height = height;
@@ -37,42 +41,42 @@ public class Field implements Serializable {
         this.rightGoal = new Goal(width - GOAL_WIDTH, goalTop, GOAL_WIDTH, GOAL_HEIGHT, false);
     }
 
-    /** @return total width of the field in pixels */
+    /** Returns total width of the field in pixels. */
     public int getWidth() {
         return width;
     }
 
-    /** @return total height of the field in pixels */
+    /** Returns total height of the field in pixels. */
     public int getHeight() {
         return height;
     }
 
-    /** @return Y coordinate of the ground surface (top of the green strip) */
+    /** Returns y coordinate of the ground surface (top of the green strip). */
     public int getGroundY() {
         return groundY;
     }
 
-    /** @return Y coordinate of the goal crossbar */
+    /** Returns y coordinate of the goal crossbar. */
     public int getGoalTop() {
         return groundY - GOAL_HEIGHT;
     }
 
-    /** @return X coordinate of the left goal line (boundary of left goal mouth) */
+    /** Returns x coordinate of the left goal line (boundary of left goal mouth). */
     public int getLeftGoalLine() {
         return leftGoal.getPositionX() + leftGoal.getWidth();
     }
 
-    /** @return X coordinate of the right goal line */
+    /** Returns x coordinate of the right goal line. */
     public int getRightGoalLine() {
         return rightGoal.getPositionX();
     }
 
-    /** @return the left goal */
+    /** Returns the left goal. */
     public Goal getLeftGoal() {
         return leftGoal;
     }
 
-    /** @return the right goal */
+    /** Returns the right goal. */
     public Goal getRightGoal() {
         return rightGoal;
     }

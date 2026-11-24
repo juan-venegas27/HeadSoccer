@@ -29,7 +29,9 @@ public class HeadSoccerGUI extends JFrame {
     private GamePanel gamePanel;
     private EndGamePanel endGamePanel;
 
-    /** Creates the main window and initializes all screens. */
+    /**
+     * Creates the main window and initializes all screens.
+     */
     public HeadSoccerGUI() {
         super("DOPOSoccer 2026-2");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -59,7 +61,11 @@ public class HeadSoccerGUI extends JFrame {
         controller.saveProgress();
     }
 
-    /** Applies one of the field resolutions and resizes panels cleanly. */
+    /**
+     * Applies one of the field resolutions and resizes panels cleanly.
+     * @param width width in pixels
+     * @param height height in pixels
+     */
     public void applyResolution(int width, int height) {
         controller.setResolution(width, height);
         Dimension dim = new Dimension(width, height);
@@ -91,7 +97,9 @@ public class HeadSoccerGUI extends JFrame {
         cardLayout.show(cardPanel, CARD_SELECTION);
     }
 
-    /** Creates a new match through the controller and opens the game panel. */
+    /**
+     * Creates a new match through the controller and opens the game panel.
+     */
     public void openGame() {
         try {
             HeadSoccer model = controller.startNewMatch();
@@ -101,7 +109,10 @@ public class HeadSoccerGUI extends JFrame {
         }
     }
 
-    /** Initializes and displays the game panel for the given match model. */
+    /**
+     * Initializes and displays the game panel for the given match model.
+     * @param model match model instance
+     */
     private void launchModel(HeadSoccer model) {
         if (gamePanel != null) {
             gamePanel.stopGame();
@@ -124,7 +135,10 @@ public class HeadSoccerGUI extends JFrame {
         gamePanel.requestFocusInWindow();
     }
 
-    /** Saves the current active match to a file chosen by the user. */
+    /**
+     * Saves the current active match to a file chosen by the user.
+     * @param model match model instance
+     */
     public void saveCurrentGame(HeadSoccer model) {
         if (model == null) return;
         JFileChooser chooser = new JFileChooser();
@@ -142,7 +156,9 @@ public class HeadSoccerGUI extends JFrame {
         }
     }
 
-    /** Opens a previously saved match file chosen by the user. */
+    /**
+     * Opens a previously saved match file chosen by the user.
+     */
     public void openSavedGame() {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Abrir partida DOPOSoccer");
@@ -157,7 +173,9 @@ public class HeadSoccerGUI extends JFrame {
         }
     }
 
-    /** Shows the end-game results screen, syncs earned points, and stops the game loop. */
+    /**
+     * Shows the end-game results screen, syncs earned points, and stops the game loop.
+     */
     public void openEndGame() {
         if (gamePanel != null) {
             gamePanel.stopGame();
@@ -176,43 +194,64 @@ public class HeadSoccerGUI extends JFrame {
     /** Returns selected match modality. */
     public int getModality() { return controller.getModality(); }
 
-    /** Sets match modality constant. */
+    /**
+     * Sets match modality constant.
+     * @param modality match modality constant (PvP or PvM)
+     */
     public void setModality(int modality) { controller.setModality(modality); }
 
     /** Returns selected machine profile. */
     public String getMachineProfile() { return controller.getMachineProfile(); }
 
-    /** Sets machine profile name. */
+    /**
+     * Sets machine profile name.
+     * @param machineProfile machine player profile name
+     */
     public void setMachineProfile(String machineProfile) { controller.setMachineProfile(machineProfile); }
 
     /** Returns selected country for player 1. */
     public String getP1Country() { return controller.getP1Country(); }
 
-    /** Sets country name for player 1. */
+    /**
+     * Sets country name for player 1.
+     * @param p1Country country name for player 1
+     */
     public void setP1Country(String p1Country) { controller.setP1Country(p1Country); }
 
     /** Returns selected country for player 2. */
     public String getP2Country() { return controller.getP2Country(); }
 
-    /** Sets country name for player 2. */
+    /**
+     * Sets country name for player 2.
+     * @param p2Country country name for player 2
+     */
     public void setP2Country(String p2Country) { controller.setP2Country(p2Country); }
 
     /** Returns match victory mode. */
     public int getMatchType() { return controller.getMatchType(); }
 
-    /** Sets match victory mode constant. */
+    /**
+     * Sets match victory mode constant.
+     * @param matchType match mode constant (by time or by goals)
+     */
     public void setMatchType(int matchType) { controller.setMatchType(matchType); }
 
     /** Returns configured match duration in minutes. */
     public int getMatchMinutes() { return controller.getMatchMinutes(); }
 
-    /** Sets match duration in minutes. */
+    /**
+     * Sets match duration in minutes.
+     * @param matchMinutes match duration in minutes
+     */
     public void setMatchMinutes(int matchMinutes) { controller.setMatchMinutes(matchMinutes); }
 
     /** Returns configured goal target. */
     public int getTargetGoals() { return controller.getTargetGoals(); }
 
-    /** Sets goal target count. */
+    /**
+     * Sets goal target count.
+     * @param targetGoals goal count required to win
+     */
     public void setTargetGoals(int targetGoals) { controller.setTargetGoals(targetGoals); }
 
     /** Returns player 1 progression array. */
@@ -221,7 +260,10 @@ public class HeadSoccerGUI extends JFrame {
     /** Returns player 2 progression array. */
     public int[] getP2Progress() { return controller.getP2Progress(); }
 
-    /** Application entry point. */
+    /**
+     * Application entry point.
+     * @param args command-line arguments
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             HeadSoccerGUI gui = new HeadSoccerGUI();

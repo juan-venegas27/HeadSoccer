@@ -11,7 +11,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/** Unit test suite for DOPOSoccer. */
+/** Unit test suite for the game. */
 public class HeadSoccerTest {
 
     /** Verifies that Player 1 cannot move past the left goal line boundary. */

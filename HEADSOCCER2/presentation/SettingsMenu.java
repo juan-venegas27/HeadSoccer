@@ -16,7 +16,10 @@ public class SettingsMenu extends JPanel {
     private JButton backButton;
     private boolean updatingCombo;
 
-    /** Creates the settings menu panel. */
+    /**
+     * Creates the settings menu panel.
+     * @param gui main application frame
+     */
     public SettingsMenu(HeadSoccerGUI gui) {
         this.gui = gui;
         setPreferredSize(new Dimension(900, 540));
@@ -48,7 +51,10 @@ public class SettingsMenu extends JPanel {
         add(backButton, gbc);
     }
 
-    /** Builds the resolution selector panel and binds its change listener. */
+    /**
+     * Builds the resolution selector panel and binds its change listener.
+     * @return panel containing the resolution selector
+     */
     private JPanel createResolutionPanel() {
         String[] resolutions = {
             "800 x 480 (Pequeña)",
@@ -76,7 +82,10 @@ public class SettingsMenu extends JPanel {
         return resPanel;
     }
 
-    /** Builds the read-only control legend text area. */
+    /**
+     * Builds the read-only control legend text area.
+     * @return read-only text area showing keyboard controls
+     */
     private JTextArea createControlsInfoArea() {
         JTextArea controlsInfo = new JTextArea(
             "CONTROLES DEL JUEGO:\n\n" +
@@ -101,7 +110,9 @@ public class SettingsMenu extends JPanel {
         return controlsInfo;
     }
 
-    /** Synchronizes the resolution combo box with the current GUI width without triggering resize. */
+    /**
+     * Synchronizes the resolution combo box with the current GUI width without triggering resize.
+     */
     public void syncResolutionFromGUI() {
         updatingCombo = true;
         int w = gui.getFieldWidth();
@@ -115,7 +126,10 @@ public class SettingsMenu extends JPanel {
         updatingCombo = false;
     }
 
-    /** Paints the stadium background overlay behind settings. */
+    /**
+     * Paints the stadium background overlay behind settings.
+     * @param g graphics context used for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -125,7 +139,9 @@ public class SettingsMenu extends JPanel {
         g.fillRect(0, 0, getWidth(), getHeight());
     }
 
-    /** Applies the selected resolution option to the main window. */
+    /**
+     * Applies the selected resolution option to the main window.
+     */
     private void applySelectedResolution() {
         int idx = resolutionBox.getSelectedIndex();
         if (idx == 0) {
@@ -137,7 +153,11 @@ public class SettingsMenu extends JPanel {
         }
     }
 
-    /** Creates a styled navigation button. */
+    /**
+     * Creates a styled navigation button.
+     * @param text text to display
+     * @return configured button component
+     */
     private JButton createButton(String text) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(220, 44));

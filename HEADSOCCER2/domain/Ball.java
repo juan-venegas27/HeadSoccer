@@ -33,7 +33,11 @@ public class Ball implements Serializable {
     private int illusionTicks;
     private final List<double[]> decoyBalls;
 
-    /** Creates a ball at the specified initial position. */
+    /**
+     * Creates a ball at the specified initial position.
+     * @param x horizontal coordinate
+     * @param y vertical coordinate
+     */
     public Ball(double x, double y) {
         this.positionX = x;
         this.positionY = y;
@@ -49,27 +53,44 @@ public class Ball implements Serializable {
         this.decoyBalls = new ArrayList<>();
     }
 
-    /** Applies an impulse to the ball velocity. */
+    /**
+     * Applies an impulse to the ball velocity.
+     * @param impulseX horizontal velocity impulse
+     * @param impulseY vertical velocity impulse
+     */
     public void applyImpulse(double impulseX, double impulseY) {
         this.velocityX += impulseX;
         this.velocityY += impulseY;
         capSpeed();
     }
 
-    /** Sets the ball position directly. */
+    /**
+     * Sets the ball position directly.
+     * @param x horizontal coordinate
+     * @param y vertical coordinate
+     */
     public void setPosition(double x, double y) {
         this.positionX = x;
         this.positionY = y;
     }
 
-    /** Sets the ball velocity directly. */
+    /**
+     * Sets the ball velocity directly.
+     * @param vx horizontal velocity component
+     * @param vy vertical velocity component
+     */
     public void setVelocity(double vx, double vy) {
         this.velocityX = vx;
         this.velocityY = vy;
         capSpeed();
     }
 
-    /** Launches the ball as an active power shot. */
+    /**
+     * Launches the ball as an active power shot.
+     * @param power assigned special power
+     * @param owner player who launched the power shot
+     * @param direction shot horizontal direction (+1 right, -1 left)
+     */
     public void launchPowerShot(Power power, Player owner, int direction) {
         if (power == null) return;
         this.activePowerShot = power;
@@ -107,7 +128,10 @@ public class Ball implements Serializable {
         this.decoyBalls.clear();
     }
 
-    /** Advances ball physics and resolves collisions for one tick. */
+    /**
+     * Advances ball physics and resolves collisions for one tick.
+     * @param field playing field boundaries
+     */
     public void move(Field field) {
         applyGravityAndAirFriction();
 
@@ -126,13 +150,15 @@ public class Ball implements Serializable {
         capSpeed();
     }
 
-    /** @return true when a Tornado power shot is currently in flight */
+    /** Returns true when a Tornado power shot is currently in flight. */
     private boolean isActiveTornadoShot() {
         return activePowerShot != null && powerShotFlightTicks > 0
                 && Power.POWER_TORNADO.equals(activePowerShot.getName());
     }
 
-    /** Applies gravity and aerodynamic drag according to the active shot type. */
+    /**
+     * Applies gravity and aerodynamic drag according to the active shot type.
+     */
     private void applyGravityAndAirFriction() {
         boolean isStraightPower = activePowerShot != null && powerShotFlightTicks > 0
                 && (Power.POWER_AURA_AZUL.equals(activePowerShot.getName())
@@ -150,7 +176,9 @@ public class Ball implements Serializable {
         }
     }
 
-    /** Decrements active power shot flight and Illusion decoy duration timers. */
+    /**
+     * Decrements active power shot flight and Illusion decoy duration timers.
+     */
     private void tickPowerShotTimers() {
         if (powerShotFlightTicks > 0) {
             powerShotFlightTicks--;
@@ -167,7 +195,10 @@ public class Ball implements Serializable {
         }
     }
 
-    /** Resolves ceiling, ground, and outer screen wall bounces. */
+    /**
+     * Resolves ceiling, ground, and outer screen wall bounces.
+     * @param field playing field boundaries
+     */
     private void resolveWallAndFloorBounces(Field field) {
         int width = field.getWidth();
         int groundY = field.getGroundY();
@@ -208,7 +239,11 @@ public class Ball implements Serializable {
         }
     }
 
-    /** Resolves rebounds on top and underside surfaces of either goal crossbar. */
+    /**
+     * Resolves rebounds on top and underside surfaces of either goal crossbar.
+     * @param field playing field boundaries
+     * @param prevY ball vertical coordinate from the previous tick
+     */
     private void resolveCrossbarSurfaces(Field field, double prevY) {
         int goalTop = field.getGoalTop();
         if (positionX >= field.getLeftGoalLine() && positionX <= field.getRightGoalLine()) {
@@ -227,7 +262,11 @@ public class Ball implements Serializable {
         }
     }
 
-    /** Resolves circular collision against a crossbar tip post. */
+    /**
+     * Resolves circular collision against a crossbar tip post.
+     * @param postX crossbar tip horizontal coordinate
+     * @param postY crossbar tip vertical coordinate
+     */
     private void resolveCrossbarPost(double postX, double postY) {
         double dx = positionX - postX;
         double dy = positionY - postY;
@@ -248,7 +287,10 @@ public class Ball implements Serializable {
         }
     }
 
-    /** Advances physics for active Illusion decoy balls. */
+    /**
+     * Advances physics for active Illusion decoy balls.
+     * @param field playing field boundaries
+     */
     private void updateDecoyBalls(Field field) {
         if (decoyBalls.isEmpty()) return;
 
@@ -296,7 +338,9 @@ public class Ball implements Serializable {
         if (velocityY < -MAX_SPEED) velocityY = -MAX_SPEED;
     }
 
-    /** Resets the ball to its initial state. */
+    /**
+     * Resets the ball to its initial state.
+     */
     public void reset() {
         positionX = initialX;
         positionY = initialY;
@@ -306,31 +350,31 @@ public class Ball implements Serializable {
         clearAllPowerShotEffects();
     }
 
-    /** @return current X position of the ball's centre */
+    /** Returns current X position of the ball's centre. */
     public double getPositionX() { return positionX; }
 
-    /** @return current Y position of the ball's centre */
+    /** Returns current Y position of the ball's centre. */
     public double getPositionY() { return positionY; }
 
-    /** @return current horizontal velocity */
+    /** Returns current horizontal velocity. */
     public double getVelocityX() { return velocityX; }
 
-    /** @return current vertical velocity */
+    /** Returns current vertical velocity. */
     public double getVelocityY() { return velocityY; }
 
-    /** @return current rotation angle in radians */
+    /** Returns current rotation angle in radians. */
     public double getRotationAngle() { return rotationAngle; }
 
-    /** @return active power shot currently traveling on this ball, or null */
+    /** Returns active power shot currently traveling on this ball, or null. */
     public Power getActivePowerShot() { return activePowerShot; }
 
-    /** @return player who launched the active power shot, or null */
+    /** Returns player who launched the active power shot, or null. */
     public Player getPowerShotOwner() { return powerShotOwner; }
 
-    /** @return true if the ball is currently carrying an active power shot */
+    /** Returns true if the ball is currently carrying an active power shot. */
     public boolean hasActivePowerShot() { return activePowerShot != null; }
 
-    /** @return unmodifiable list of decoy ball states [x, y, vx, vy] for Ilusión */
+    /** Returns unmodifiable list of decoy ball states [x, y, vx, vy] for Ilusión. */
     public List<double[]> getDecoyBalls() {
         return Collections.unmodifiableList(decoyBalls);
     }

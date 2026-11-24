@@ -35,17 +35,36 @@ public class Power implements Serializable {
     private final double shotSpeedY;
     private boolean active;
 
-    /** Creates a power with the given name. */
+    /**
+     * Creates a power with the given name.
+     * @param name identifying name
+     */
     public Power(String name) {
         this(name, COUNTRY_KOREA, EFFECT_PUSH, 1.5, 40, 22.0, 0.0);
     }
 
-    /** Creates a power with metadata and base damage. */
+    /**
+     * Creates a power with metadata and base damage.
+     * @param name identifying name
+     * @param country selected country name
+     * @param effectName status effect identifier applied to rival
+     * @param effectDurationSeconds effect duration in seconds
+     * @param baseDamage base damage inflicted on opponent hit
+     */
     public Power(String name, String country, String effectName, double effectDurationSeconds, int baseDamage) {
         this(name, country, effectName, effectDurationSeconds, baseDamage, 20.0, 0.0);
     }
 
-    /** Creates a power with full metadata and shot speeds. */
+    /**
+     * Creates a power with full metadata and shot speeds.
+     * @param name identifying name
+     * @param country selected country name
+     * @param effectName status effect identifier applied to rival
+     * @param effectDurationSeconds effect duration in seconds
+     * @param baseDamage base damage inflicted on opponent hit
+     * @param shotSpeedX horizontal speed of the power shot
+     * @param shotSpeedY vertical speed of the power shot
+     */
     public Power(String name, String country, String effectName,
                  double effectDurationSeconds, int baseDamage,
                  double shotSpeedX, double shotSpeedY) {
@@ -59,7 +78,11 @@ public class Power implements Serializable {
         this.active = false;
     }
 
-    /** Creates the power assigned to the given country. */
+    /**
+     * Creates the power assigned to the given country.
+     * @param country selected country name
+     * @return configured Power instance for the country
+     */
     public static Power createForCountry(String country) {
         if (country == null) {
             return createForCountry(COUNTRY_KOREA);
@@ -87,37 +110,41 @@ public class Power implements Serializable {
         this.active = false;
     }
 
-    /** @return total damage scaled by the kick multiplier */
+    /**
+     * Returns total damage scaled by the kick multiplier.
+     * @param kickMultiplier damage multiplier from player kick stat
+     * @return total damage scaled by kick multiplier
+     */
     public double calculateDamage(double kickMultiplier) {
         return baseDamage * kickMultiplier;
     }
 
-    /** @return true if the power aura is currently active */
+    /** Returns true if the power aura is currently active. */
     public boolean isActive() { return active; }
 
-    /** @return the power name */
+    /** Returns the power name. */
     public String getName() { return name; }
 
-    /** @return the associated country name */
+    /** Returns the associated country name. */
     public String getCountry() { return country; }
 
-    /** @return the effect name inflicted on the opponent */
+    /** Returns the effect name inflicted on the opponent. */
     public String getEffectName() { return effectName; }
 
-    /** @return the effect duration in seconds */
+    /** Returns the effect duration in seconds. */
     public double getEffectDurationSeconds() { return effectDurationSeconds; }
 
-    /** @return the effect duration in 60-FPS ticks */
+    /** Returns the effect duration in 60-FPS ticks. */
     public int getEffectDurationTicks() {
         return (int) Math.round(effectDurationSeconds * 60.0);
     }
 
-    /** @return base damage value */
+    /** Returns base damage value. */
     public int getBaseDamage() { return baseDamage; }
 
-    /** @return horizontal launch speed of this power shot */
+    /** Returns horizontal launch speed of this power shot. */
     public double getShotSpeedX() { return shotSpeedX; }
 
-    /** @return vertical launch speed of this power shot */
+    /** Returns vertical launch speed of this power shot. */
     public double getShotSpeedY() { return shotSpeedY; }
 }

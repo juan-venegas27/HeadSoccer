@@ -26,7 +26,10 @@ public class PlayerSelection extends JPanel {
     private JButton startButton;
     private JButton backButton;
 
-    /** Creates the player selection and match setup screen. */
+    /**
+     * Creates the player selection and match setup screen.
+     * @param gui main application frame
+     */
     public PlayerSelection(HeadSoccerGUI gui) {
         this.gui = gui;
         setPreferredSize(new Dimension(900, 540));
@@ -60,7 +63,10 @@ public class PlayerSelection extends JPanel {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    /** Builds the top title and match configuration combo bar. */
+    /**
+     * Builds the top title and match configuration combo bar.
+     * @return header panel with match options
+     */
     private JPanel createNorthOptionsPanel() {
         JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.setOpaque(false);
@@ -96,7 +102,9 @@ public class PlayerSelection extends JPanel {
         return northPanel;
     }
 
-    /** Wires change listeners for modality, machine profile, and match victory rules. */
+    /**
+     * Wires change listeners for modality, machine profile, and match victory rules.
+     */
     private void bindOptionListeners() {
         modalityBox.addActionListener(e -> {
             boolean vsMachine = modalityBox.getSelectedIndex() == 1;
@@ -130,7 +138,10 @@ public class PlayerSelection extends JPanel {
         });
     }
 
-    /** Paints the stadium background overlay behind player selection. */
+    /**
+     * Paints the stadium background overlay behind player selection.
+     * @param g graphics context used for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -140,7 +151,9 @@ public class PlayerSelection extends JPanel {
         g.fillRect(0, 0, getWidth(), getHeight());
     }
 
-    /** Refreshes displayed player stats, points, and selections. */
+    /**
+     * Refreshes displayed player stats, points, and selections.
+     */
     public void refreshUI() {
         boolean vsMachine = gui.getModality() == HeadSoccer.MODE_PVM;
         modalityBox.setSelectedIndex(vsMachine ? 1 : 0);
@@ -152,7 +165,11 @@ public class PlayerSelection extends JPanel {
         card2.updateFromProgress(gui.getP2Progress());
     }
 
-    /** Creates a styled configuration bar label. */
+    /**
+     * Creates a styled configuration bar label.
+     * @param text text to display
+     * @return styled label for the options bar
+     */
     private JLabel createOptionLabel(String text) {
         JLabel l = new JLabel(text);
         l.setForeground(Color.WHITE);
@@ -160,7 +177,12 @@ public class PlayerSelection extends JPanel {
         return l;
     }
 
-    /** Creates a styled screen action button. */
+    /**
+     * Creates a styled screen action button.
+     * @param text text to display
+     * @param bg button background color
+     * @return configured button component
+     */
     private JButton createButton(String text, Color bg) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(200, 42));
@@ -198,7 +220,14 @@ public class PlayerSelection extends JPanel {
         private final boolean isPlayer1;
         private int[] progress;
 
-        /** Builds a player configuration card with country preview and stat controls. */
+        /**
+         * Builds a player configuration card with country preview and stat controls.
+         * @param title header title text
+         * @param borderColor card border color
+         * @param initialCountry initially selected country name
+         * @param progress array containing stats and available points
+         * @param isPlayer1 true for player 1, false for player 2
+         */
         PlayerConfigCard(String title, Color borderColor, String initialCountry,
                          int[] progress, boolean isPlayer1) {
             this.isPlayer1 = isPlayer1;
@@ -231,13 +260,19 @@ public class PlayerSelection extends JPanel {
             updateFromProgress(progress);
         }
 
-        /** Builds the character head preview and power info panel. */
+        /**
+         * Builds the character head preview and power info panel.
+         * @return center panel with character portrait and power summary
+         */
         private JPanel createPreviewCenterPanel() {
             JPanel center = new JPanel(new BorderLayout(4, 4));
             center.setOpaque(false);
 
             previewPanel = new JPanel() {
-                /** Renders the character head sprite for the selected country. */
+                /**
+                 * Renders the character head sprite for the selected country.
+                 * @param g graphics context used for painting
+                 */
                 @Override
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
@@ -262,7 +297,10 @@ public class PlayerSelection extends JPanel {
             return center;
         }
 
-        /** Builds the player points label and 4-stat upgrade grid. */
+        /**
+         * Builds the player points label and 4-stat upgrade grid.
+         * @return panel containing upgrade buttons and available points
+         */
         private JPanel createStatsSouthPanel() {
             JPanel statsContainer = new JPanel(new BorderLayout(4, 4));
             statsContainer.setOpaque(false);
@@ -300,12 +338,17 @@ public class PlayerSelection extends JPanel {
             return statsContainer;
         }
 
-        /** Updates the displayed card header title. */
+        /**
+         * Updates the displayed card header title.
+         * @param newTitle updated card header title
+         */
         void refreshTitle(String newTitle) {
             titleLabel.setText(newTitle);
         }
 
-        /** Updates GUI country choice, power summary label, and preview sprite. */
+        /**
+         * Updates GUI country choice, power summary label, and preview sprite.
+         */
         private void onCountryChanged() {
             String country = (String) countryBox.getSelectedItem();
             if (isPlayer1) {
@@ -319,7 +362,10 @@ public class PlayerSelection extends JPanel {
             previewPanel.repaint();
         }
 
-        /** Attempts to spend points to upgrade the specified player statistic. */
+        /**
+         * Attempts to spend points to upgrade the specified player statistic.
+         * @param statKey statistic key (speed, jump, kick, or survival)
+         */
         private void upgradeStat(String statKey) {
             try {
                 gui.getController().upgradePlayerStat(isPlayer1, statKey);
@@ -330,7 +376,10 @@ public class PlayerSelection extends JPanel {
             }
         }
 
-        /** Refreshes displayed points, stat levels, and upgrade button labels. */
+        /**
+         * Refreshes displayed points, stat levels, and upgrade button labels.
+         * @param prog array containing stats and available points
+         */
         void updateFromProgress(int[] prog) {
             this.progress = prog;
             String[] names = {"Speed", "Jump", "Kick", "Survival"};

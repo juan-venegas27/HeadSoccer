@@ -56,7 +56,15 @@ public class Player implements Serializable {
     private int effectTicks;
     private double effectVelocityX;
 
-    /** Creates a player with the given initial state and power. */
+    /**
+     * Creates a player with the given initial state and power.
+     * @param x horizontal coordinate
+     * @param y vertical coordinate
+     * @param color player kit color
+     * @param name identifying name
+     * @param power assigned special power
+     * @param facingDirection initial facing direction (+1 right, -1 left)
+     */
     public Player(double x, double y, Color color, String name, Power power, int facingDirection) {
         this.positionX = x;
         this.positionY = y;
@@ -88,14 +96,21 @@ public class Player implements Serializable {
         this.effectVelocityX = 0;
     }
 
-    /** Updates player movement, timers, gravity, and bounds. */
+    /**
+     * Updates player movement, timers, gravity, and bounds.
+     * @param minX minimum allowed horizontal coordinate
+     * @param maxX maximum allowed horizontal coordinate
+     * @param groundY vertical coordinate of the ground surface
+     */
     public void update(int minX, int maxX, int groundY) {
         tickTimersAndEffects();
         updateControlledMovement();
         applyGravityAndBounds(minX, maxX, groundY);
     }
 
-    /** Advances power bar recharge, kick animation, and active effect timers. */
+    /**
+     * Advances power bar recharge, kick animation, and active effect timers.
+     */
     private void tickTimersAndEffects() {
         if (powerBar < 100.0) {
             powerBar = Math.min(100.0, powerBar + POWER_CHARGE_PER_TICK);
@@ -118,7 +133,9 @@ public class Player implements Serializable {
         }
     }
 
-    /** Updates horizontal velocity and jumping from player input, stun, or disabling effects. */
+    /**
+     * Updates horizontal velocity and jumping from player input, stun, or disabling effects.
+     */
     private void updateControlledMovement() {
         if (stunTicks > 0) {
             stunTicks--;
@@ -153,7 +170,12 @@ public class Player implements Serializable {
         wantsToJump = false;
     }
 
-    /** Integrates velocity, gravity, floor contact, and horizontal bounds. */
+    /**
+     * Integrates velocity, gravity, floor contact, and horizontal bounds.
+     * @param minX minimum allowed horizontal coordinate
+     * @param maxX maximum allowed horizontal coordinate
+     * @param groundY vertical coordinate of the ground surface
+     */
     private void applyGravityAndBounds(int minX, int maxX, int groundY) {
         positionX += velocityX;
         velocityY += GRAVITY;
@@ -185,17 +207,27 @@ public class Player implements Serializable {
         wantsToJump = true;
     }
 
-    /** @param moving true to move left */
+    /**
+     * 
+     * @param moving true while directional movement key is held
+     */
     public void setMovingLeft(boolean moving) {
         this.movingLeft = moving;
     }
 
-    /** @param moving true to move right */
+    /**
+     * 
+     * @param moving true while directional movement key is held
+     */
     public void setMovingRight(boolean moving) {
         this.movingRight = moving;
     }
 
-    /** Performs a kick against the ball or nearby opponent. */
+    /**
+     * Performs a kick against the ball or nearby opponent.
+     * @param ball active match ball
+     * @param opponent opposing player
+     */
     public void hit(Ball ball, Player opponent) {
         if (!canAct()) return;
 
@@ -237,7 +269,10 @@ public class Player implements Serializable {
         }
     }
 
-    /** Launches the player's active power shot on the ball. */
+    /**
+     * Launches the player's active power shot on the ball.
+     * @param ball active match ball
+     */
     public void executePowerShot(Ball ball) {
         if (ball == null || !power.isActive()) return;
         int shotDir = initialFacingDirection;
@@ -252,7 +287,9 @@ public class Player implements Serializable {
         ball.launchPowerShot(power, this, shotDir);
     }
 
-    /** Activates the player's special power aura when charged. */
+    /**
+     * Activates the player's special power aura when charged.
+     */
     public void activatePower() {
         if (!canAct()) return;
         if (powerBar >= 100.0 && !power.isActive()) {
@@ -266,7 +303,10 @@ public class Player implements Serializable {
         powerBar = Math.min(100.0, powerBar + 25.0);
     }
 
-    /** Applies damage and stuns the player when health reaches zero. */
+    /**
+     * Applies damage and stuns the player when health reaches zero.
+     * @param damage damage amount applied to health
+     */
     public void takeDamage(double damage) {
         if (damage <= 0 || isStunned()) return;
         currentHealth = Math.max(0.0, currentHealth - damage);
@@ -279,7 +319,12 @@ public class Player implements Serializable {
         }
     }
 
-    /** Applies a rival power effect to this player. */
+    /**
+     * Applies a rival power effect to this player.
+     * @param effectName status effect identifier applied to rival
+     * @param durationTicks effect duration in game ticks
+     * @param pushDir push direction (+1 right, -1 left)
+     */
     public void applyEffect(String effectName, int durationTicks, int pushDir) {
         this.activeEffect = effectName;
         this.effectTicks = Math.max(1, durationTicks);
@@ -296,7 +341,11 @@ public class Player implements Serializable {
         }
     }
 
-    /** Upgrades a player statistic using earned points. */
+    /**
+     * Upgrades a player statistic using earned points.
+     * @param statName statistic name (speed, jump, kick, or survival)
+     * @throws HeadSoccerException if the configuration, input, or file operation fails
+     */
     public void upgradeStat(String statName) throws HeadSoccerException {
         if (statName == null) {
             throw new HeadSoccerException(HeadSoccerException.INVALID_STAT_NAME);
@@ -335,13 +384,25 @@ public class Player implements Serializable {
         }
     }
 
-    /** @return upgrade cost for the given stat level */
+    /**
+     * Returns upgrade cost for the given stat level.
+     * @param currentLevel current statistic level
+     * @return point cost for the next upgrade level
+     */
     public static int getUpgradeCost(int currentLevel) {
         if (currentLevel >= MAX_STAT_LEVEL) return 0;
-        return BASE_UPGRADE_COST * (1 << Math.max(0, currentLevel - 1));
+        int cost = BASE_UPGRADE_COST;
+        for (int i = 1; i < currentLevel; i++) {
+            cost = cost * 2;
+        }
+        return cost;
     }
 
-    /** @return level of stat by name, or -1 if unknown */
+    /**
+     * Returns level of stat by name, or -1 if unknown.
+     * @param statName statistic name (speed, jump, kick, or survival)
+     * @return level of stat by name, or -1 if unknown
+     */
     public int getStatLevel(String statName) {
         if (statName == null) return -1;
         switch (statName.trim().toLowerCase()) {
@@ -353,7 +414,14 @@ public class Player implements Serializable {
         }
     }
 
-    /** Sets the four player statistics and points. */
+    /**
+     * Sets the four player statistics and points.
+     * @param speed speed statistic level
+     * @param jump jump statistic level
+     * @param kick kick statistic level
+     * @param survival survival statistic level
+     * @param points available upgrade points
+     */
     public void setProgress(int speed, int jump, int kick, int survival, int points) {
         this.speedStat = clampStat(speed);
         this.jumpStat = clampStat(jump);
@@ -363,19 +431,28 @@ public class Player implements Serializable {
         this.currentHealth = getMaxHealth();
     }
 
-    /** Clamps a stat level within [1, MAX_STAT_LEVEL]. */
+    /**
+     * Clamps a stat level within [1, MAX_STAT_LEVEL].
+     * @param level statistic level to clamp
+     * @return level clamped between 1 and 10
+     */
     private int clampStat(int level) {
         return Math.max(1, Math.min(MAX_STAT_LEVEL, level));
     }
 
-    /** Adds earned match points. */
+    /**
+     * Adds earned match points.
+     * @param earned points earned to add
+     */
     public void addPoints(int earned) {
         if (earned > 0) {
             this.points += earned;
         }
     }
 
-    /** Resets position and movement flags after a goal. */
+    /**
+     * Resets position and movement flags after a goal.
+     */
     public void reset() {
         positionX = initialX;
         positionY = initialY;
@@ -389,7 +466,9 @@ public class Player implements Serializable {
         facingDirection = initialFacingDirection;
     }
 
-    /** Resets full match state for testing or new round. */
+    /**
+     * Resets full match state for testing or new round.
+     */
     public void resetForMatch() {
         reset();
         currentHealth = getMaxHealth();
@@ -403,25 +482,28 @@ public class Player implements Serializable {
         }
     }
 
-    /** @return true if player is not stunned and not unconscious */
+    /** Returns true if player is not stunned and not unconscious. */
     public boolean canAct() {
         return stunTicks <= 0 && !Power.EFFECT_UNCONSCIOUS.equals(activeEffect);
     }
 
-    /** @return true if player is currently stunned */
+    /** Returns true if player is currently stunned. */
     public boolean isStunned() { return stunTicks > 0; }
 
-    /** @return kick damage multiplier: 1 + 0.10 * (Kick - 1) */
+    /** Returns kick damage multiplier: 1 + 0.10 * (Kick - 1). */
     public double getKickMultiplier() {
         return 1.0 + 0.10 * (kickStat - 1);
     }
 
-    /** @return max health: 100 * (1 + 0.10 * (Survival - 1)) */
+    /** Returns max health: 100 * (1 + 0.10 * (Survival - 1)). */
     public double getMaxHealth() {
         return Math.round(100.0 * (1.0 + 0.10 * (survivalStat - 1)));
     }
 
-    /** @return effective horizontal speed considering Speed stat and Electrocuted effect */
+    /**
+     * Returns effective horizontal speed considering Speed stat and Electrocuted effect.
+     * @return effective horizontal speed considering Speed stat and Electrocuted effect
+     */
     public double getEffectiveMoveSpeed() {
         double speed = BASE_MOVE_SPEED * (1.0 + 0.10 * (speedStat - 1));
         if (Power.EFFECT_ELECTROCUTE.equals(activeEffect)) {
@@ -430,21 +512,27 @@ public class Player implements Serializable {
         return speed;
     }
 
-    /** @return effective jump velocity calibrated to clear goal crossbar cleanly */
+    /** Returns effective jump velocity calibrated to clear goal crossbar cleanly. */
     public double getEffectiveJumpForce() {
         return BASE_JUMP_FORCE * (1.0 + 0.02 * (jumpStat - 1));
     }
 
-    /** @param x new centre X position */
+    /**
+     * 
+     * @param x horizontal coordinate
+     */
     public void setPositionX(double x) { this.positionX = x; }
 
-    /** @return current centre X position */
+    /** Returns current centre X position. */
     public double getPositionX() { return positionX; }
 
-    /** @return current centre Y position */
+    /** Returns current centre Y position. */
     public double getPositionY() { return positionY; }
 
-    /** @return current X coordinate of the kicking foot */
+    /**
+     * Returns current X coordinate of the kicking foot.
+     * @return current X coordinate of the kicking foot
+     */
     public double getFootX() {
         if (kickAnimTicks > 0) {
             double progress = Math.sin((kickAnimTicks / 12.0) * Math.PI);
@@ -453,7 +541,10 @@ public class Player implements Serializable {
         return positionX;
     }
 
-    /** @return current Y coordinate of the kicking foot */
+    /**
+     * Returns current Y coordinate of the kicking foot.
+     * @return current Y coordinate of the kicking foot
+     */
     public double getFootY() {
         if (kickAnimTicks > 0) {
             double progress = Math.sin((kickAnimTicks / 12.0) * Math.PI);
@@ -462,14 +553,17 @@ public class Player implements Serializable {
         return positionY + HEAD_RADIUS;
     }
 
-    /** @return current kick animation rotation angle in radians */
+    /** Returns current kick animation rotation angle in radians. */
     public double getKickAngle() {
         if (kickAnimTicks <= 0) return 0.0;
         double progress = Math.sin((kickAnimTicks / 12.0) * Math.PI);
         return -facingDirection * progress * 0.9;
     }
 
-    /** @return current effective horizontal velocity */
+    /**
+     * Returns current effective horizontal velocity.
+     * @return current effective horizontal velocity
+     */
     public double getVelocityX() {
         if (stunTicks > 0 || Power.EFFECT_UNCONSCIOUS.equals(activeEffect)) {
             return velocityX;
@@ -479,51 +573,54 @@ public class Player implements Serializable {
         return velocityX;
     }
 
-    /** @return current vertical velocity */
+    /** Returns current vertical velocity. */
     public double getVelocityY() { return velocityY; }
 
-    /** @return true if the player is standing on the ground */
+    /** Returns true if the player is standing on the ground. */
     public boolean isOnGround() { return onGround; }
 
-    /** @return display color */
+    /** Returns display color. */
     public Color getColor() { return color; }
 
-    /** @return player display name */
+    /** Returns player display name. */
     public String getName() { return name; }
 
-    /** @return selected country character name */
+    /** Returns selected country character name. */
     public String getCountry() { return country; }
 
-    /** @return assigned country Power instance */
+    /** Returns assigned country Power instance. */
     public Power getPower() { return power; }
 
-    /** @return facing direction (+1 right, -1 left) */
+    /** Returns facing direction (+1 right, -1 left). */
     public int getFacingDirection() { return facingDirection; }
 
-    /** @return current health points */
+    /** Returns current health points. */
     public double getCurrentHealth() { return currentHealth; }
 
-    /** @return current power bar charge percentage (0.0 to 100.0) */
+    /** Returns current power bar charge percentage (0.0 to 100.0). */
     public double getPowerBar() { return powerBar; }
 
-    /** @param value power bar percentage clamped to [0.0, 100.0] */
+    /**
+     * 
+     * @param value power bar value between 0 and 100
+     */
     public void setPowerBar(double value) { this.powerBar = Math.max(0.0, Math.min(100.0, value)); }
 
-    /** @return currently active rival status effect name, or null */
+    /** Returns currently active rival status effect name, or null. */
     public String getActiveEffect() { return activeEffect; }
 
-    /** @return current Speed statistic level */
+    /** Returns current Speed statistic level. */
     public int getSpeedStat() { return speedStat; }
 
-    /** @return current Jump statistic level */
+    /** Returns current Jump statistic level. */
     public int getJumpStat() { return jumpStat; }
 
-    /** @return current Kick statistic level */
+    /** Returns current Kick statistic level. */
     public int getKickStat() { return kickStat; }
 
-    /** @return current Survival statistic level */
+    /** Returns current Survival statistic level. */
     public int getSurvivalStat() { return survivalStat; }
 
-    /** @return accumulated upgrade points */
+    /** Returns accumulated upgrade points. */
     public int getPoints() { return points; }
 }

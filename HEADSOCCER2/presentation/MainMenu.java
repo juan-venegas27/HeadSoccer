@@ -15,7 +15,10 @@ public class MainMenu extends JPanel {
     private JButton settingsButton;
     private JButton exitButton;
 
-    /** Creates the main menu panel. */
+    /**
+     * Creates the main menu panel.
+     * @param gui main application frame
+     */
     public MainMenu(HeadSoccerGUI gui) {
         this.gui = gui;
         setPreferredSize(new Dimension(900, 540));
@@ -57,7 +60,10 @@ public class MainMenu extends JPanel {
         gbc.gridy = 5; add(exitButton, gbc);
     }
 
-    /** Paints the stadium background overlay behind the main menu. */
+    /**
+     * Paints the stadium background overlay behind the main menu.
+     * @param g graphics context used for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -67,7 +73,12 @@ public class MainMenu extends JPanel {
         g.fillRect(0, 0, getWidth(), getHeight());
     }
 
-    /** Creates a styled menu action button. */
+    /**
+     * Creates a styled menu action button.
+     * @param text text to display
+     * @param bg button background color
+     * @return configured button component
+     */
     private JButton createButton(String text, Color bg) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(250, 46));

@@ -30,12 +30,16 @@ public class GameController {
     private int[] p1Progress = {1, 1, 1, 1, 0};
     private int[] p2Progress = {1, 1, 1, 1, 0};
 
-    /** Initializes controller defaults and loads saved player progression. */
+    /**
+     * Initializes controller defaults and loads saved player progression.
+     */
     public GameController() {
         loadProgress();
     }
 
-    /** Loads saved player progression from disk if available. */
+    /**
+     * Loads saved player progression from disk if available.
+     */
     public void loadProgress() {
         if (!PROGRESS_FILE.exists()) {
             return;
@@ -51,7 +55,9 @@ public class GameController {
         }
     }
 
-    /** Saves current player statistics and points to disk. */
+    /**
+     * Saves current player statistics and points to disk.
+     */
     public void saveProgress() {
         try {
             HeadSoccer.saveProgress(PROGRESS_FILE, p1Progress, p2Progress);
@@ -60,7 +66,12 @@ public class GameController {
         }
     }
 
-    /** Upgrades one player statistic, updates progression, and saves changes. */
+    /**
+     * Upgrades one player statistic, updates progression, and saves changes.
+     * @param isPlayer1 true for player 1, false for player 2
+     * @param statKey statistic key (speed, jump, kick, or survival)
+     * @throws HeadSoccerException if the configuration, input, or file operation fails
+     */
     public void upgradePlayerStat(boolean isPlayer1, String statKey) throws HeadSoccerException {
         int[] progress = isPlayer1 ? p1Progress : p2Progress;
         Player temp = new Player(0, 0, Color.BLUE, "Temp",
@@ -75,7 +86,11 @@ public class GameController {
         saveProgress();
     }
 
-    /** Validates settings, builds a new match with current progress, and stores it. */
+    /**
+     * Validates settings, builds a new match with current progress, and stores it.
+     * @return newly created match model
+     * @throws HeadSoccerException if the configuration, input, or file operation fails
+     */
     public HeadSoccer startNewMatch() throws HeadSoccerException {
         HeadSoccer.validateConfiguration(fieldWidth, fieldHeight, matchMinutes, targetGoals);
         HeadSoccer match = new HeadSoccer(
@@ -90,7 +105,12 @@ public class GameController {
         return match;
     }
 
-    /** Loads a saved match from disk and sets it as active. */
+    /**
+     * Loads a saved match from disk and sets it as active.
+     * @param file target file on disk
+     * @return loaded match model
+     * @throws HeadSoccerException if the configuration, input, or file operation fails
+     */
     public HeadSoccer loadMatch(File file) throws HeadSoccerException {
         HeadSoccer loaded = HeadSoccer.open(file);
         this.model = loaded;
@@ -99,7 +119,12 @@ public class GameController {
         return loaded;
     }
 
-    /** Saves the specified or active match to disk. */
+    /**
+     * Saves the specified or active match to disk.
+     * @param match match model instance
+     * @param file target file on disk
+     * @throws HeadSoccerException if the configuration, input, or file operation fails
+     */
     public void saveMatch(HeadSoccer match, File file) throws HeadSoccerException {
         HeadSoccer target = (match != null) ? match : this.model;
         if (target != null) {
@@ -107,7 +132,9 @@ public class GameController {
         }
     }
 
-    /** Finalizes the active match and synchronizes earned player progression. */
+    /**
+     * Finalizes the active match and synchronizes earned player progression.
+     */
     public void finishMatch() {
         if (model == null) {
             return;
@@ -118,7 +145,10 @@ public class GameController {
         syncProgressFromModel(model);
     }
 
-    /** Copies stats and points from the finished match into stored progression. */
+    /**
+     * Copies stats and points from the finished match into stored progression.
+     * @param match match model instance
+     */
     private void syncProgressFromModel(HeadSoccer match) {
         if (match == null) {
             return;
@@ -147,7 +177,10 @@ public class GameController {
         }
     }
 
-    /** Pauses or resumes the active match and clears pending player movement. */
+    /**
+     * Pauses or resumes the active match and clears pending player movement.
+     * @param paused true to pause, false to resume
+     */
     public void setPaused(boolean paused) {
         if (model != null) {
             model.setPaused(paused);
@@ -184,7 +217,9 @@ public class GameController {
         return model != null && model.getPlayer2() instanceof MachinePlayer;
     }
 
-    /** Resets directional movement flags for both players. */
+    /**
+     * Resets directional movement flags for both players.
+     */
     public void clearPlayerMovement() {
         if (model == null) {
             return;
@@ -195,14 +230,20 @@ public class GameController {
         model.getPlayer2().setMovingRight(false);
     }
 
-    /** Updates player 1 leftward movement state. */
+    /**
+     * Updates player 1 leftward movement state.
+     * @param moving true while directional movement key is held
+     */
     public void setPlayer1MovingLeft(boolean moving) {
         if (model != null) {
             model.getPlayer1().setMovingLeft(moving);
         }
     }
 
-    /** Updates player 1 rightward movement state. */
+    /**
+     * Updates player 1 rightward movement state.
+     * @param moving true while directional movement key is held
+     */
     public void setPlayer1MovingRight(boolean moving) {
         if (model != null) {
             model.getPlayer1().setMovingRight(moving);
@@ -230,14 +271,20 @@ public class GameController {
         }
     }
 
-    /** Updates player 2 leftward movement state. */
+    /**
+     * Updates player 2 leftward movement state.
+     * @param moving true while directional movement key is held
+     */
     public void setPlayer2MovingLeft(boolean moving) {
         if (model != null) {
             model.getPlayer2().setMovingLeft(moving);
         }
     }
 
-    /** Updates player 2 rightward movement state. */
+    /**
+     * Updates player 2 rightward movement state.
+     * @param moving true while directional movement key is held
+     */
     public void setPlayer2MovingRight(boolean moving) {
         if (model != null) {
             model.getPlayer2().setMovingRight(moving);
@@ -270,7 +317,11 @@ public class GameController {
         return model;
     }
 
-    /** Sets the configured field resolution dimensions. */
+    /**
+     * Sets the configured field resolution dimensions.
+     * @param width width in pixels
+     * @param height height in pixels
+     */
     public void setResolution(int width, int height) {
         this.fieldWidth = width;
         this.fieldHeight = height;
@@ -291,7 +342,10 @@ public class GameController {
         return modality;
     }
 
-    /** Sets match modality constant. */
+    /**
+     * Sets match modality constant.
+     * @param modality match modality constant (PvP or PvM)
+     */
     public void setModality(int modality) {
         this.modality = modality;
     }
@@ -301,7 +355,10 @@ public class GameController {
         return machineProfile;
     }
 
-    /** Sets machine difficulty profile name. */
+    /**
+     * Sets machine difficulty profile name.
+     * @param machineProfile machine player profile name
+     */
     public void setMachineProfile(String machineProfile) {
         this.machineProfile = machineProfile;
     }
@@ -311,7 +368,10 @@ public class GameController {
         return p1Country;
     }
 
-    /** Sets country name for player 1. */
+    /**
+     * Sets country name for player 1.
+     * @param p1Country country name for player 1
+     */
     public void setP1Country(String p1Country) {
         this.p1Country = p1Country;
     }
@@ -321,7 +381,10 @@ public class GameController {
         return p2Country;
     }
 
-    /** Sets country name for player 2. */
+    /**
+     * Sets country name for player 2.
+     * @param p2Country country name for player 2
+     */
     public void setP2Country(String p2Country) {
         this.p2Country = p2Country;
     }
@@ -331,7 +394,10 @@ public class GameController {
         return matchType;
     }
 
-    /** Sets match victory type constant. */
+    /**
+     * Sets match victory type constant.
+     * @param matchType match mode constant (by time or by goals)
+     */
     public void setMatchType(int matchType) {
         this.matchType = matchType;
     }
@@ -341,7 +407,10 @@ public class GameController {
         return matchMinutes;
     }
 
-    /** Sets match duration in minutes. */
+    /**
+     * Sets match duration in minutes.
+     * @param matchMinutes match duration in minutes
+     */
     public void setMatchMinutes(int matchMinutes) {
         this.matchMinutes = matchMinutes;
     }
@@ -351,7 +420,10 @@ public class GameController {
         return targetGoals;
     }
 
-    /** Sets goal target count. */
+    /**
+     * Sets goal target count.
+     * @param targetGoals goal count required to win
+     */
     public void setTargetGoals(int targetGoals) {
         this.targetGoals = targetGoals;
     }
@@ -371,7 +443,11 @@ public class GameController {
         return Player.MAX_STAT_LEVEL;
     }
 
-    /** Returns point cost to upgrade from the given statistic level. */
+    /**
+     * Returns point cost to upgrade from the given statistic level.
+     * @param currentLevel current statistic level
+     * @return point cost for the next upgrade level
+     */
     public int getStatUpgradeCost(int currentLevel) {
         return Player.getUpgradeCost(currentLevel);
     }

@@ -17,7 +17,11 @@ public class PauseMenu extends JPanel {
     private JButton finishMatchButton;
     private JButton mainMenuButton;
 
-    /** Creates the pause menu overlay. */
+    /**
+     * Creates the pause menu overlay.
+     * @param gui main application frame
+     * @param gamePanel active game rendering panel
+     */
     public PauseMenu(HeadSoccerGUI gui, GamePanel gamePanel) {
         this.gui = gui;
         this.gamePanel = gamePanel;
@@ -54,7 +58,10 @@ public class PauseMenu extends JPanel {
         gbc.gridy = 5; add(mainMenuButton, gbc);
     }
 
-    /** Paints the translucent dark backdrop for the pause overlay. */
+    /**
+     * Paints the translucent dark backdrop for the pause overlay.
+     * @param g graphics context used for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         g.setColor(new Color(0, 0, 0, 175));
@@ -62,7 +69,12 @@ public class PauseMenu extends JPanel {
         super.paintComponent(g);
     }
 
-    /** Creates a styled pause menu action button. */
+    /**
+     * Creates a styled pause menu action button.
+     * @param text text to display
+     * @param bg button background color
+     * @return configured button component
+     */
     private JButton createButton(String text, Color bg) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(240, 42));
