@@ -84,20 +84,48 @@ public class Power implements Serializable {
      * @return configured Power instance for the country
      */
     public static Power createForCountry(String country) {
-        if (country == null) {
-            return createForCountry(COUNTRY_KOREA);
+        return CharacterRegistry.createPowerForCountry(country);
+    }
+
+    /**
+     * Launches this power shot on the given ball in the specified horizontal direction.
+     * @param ball active match ball
+     * @param direction horizontal shot direction (+1 right, -1 left)
+     */
+    public void onLaunch(Ball ball, int direction) {
+        if (ball != null) {
+            ball.setVelocity(shotSpeedX * direction, shotSpeedY);
         }
-        String normalized = country.trim().toLowerCase();
-        if (normalized.contains("corea") || normalized.contains("korea")) {
-            return new Power(POWER_AURA_AZUL, COUNTRY_KOREA, EFFECT_PUSH, 1.5, 40, 20.0, 0.0);
-        } else if (normalized.contains("camer")) {
-            return new Power(POWER_RAYO, COUNTRY_CAMEROON, EFFECT_ELECTROCUTE, 3.0, 60, 16.5, 0.0);
-        } else if (normalized.contains("nigeria")) {
-            return new Power(POWER_TORNADO, COUNTRY_NIGERIA, EFFECT_UNCONSCIOUS, 3.0, 40, 14.0, 6.0);
-        } else if (normalized.contains("estados") || normalized.contains("usa")) {
-            return new Power(POWER_ILUSION, COUNTRY_USA, EFFECT_CONFUSION, 2.5, 30, 13.5, -3.0);
+    }
+
+    /**
+     * Applies active flight physics to the ball while this power shot is in flight.
+     * @param ball active match ball
+     * @param gravity default ball gravity constant
+     * @param airFriction default ball air friction factor
+     */
+    public void applyFlightPhysics(Ball ball, double gravity, double airFriction) {
+        if (ball != null) {
+            ball.stepVelocity(0.05, 0.997);
         }
-        return new Power(POWER_AURA_AZUL, country, EFFECT_PUSH, 1.5, 40, 20.0, 0.0);
+    }
+
+    /**
+     * Handles custom ground bounce physics when this power shot strikes the turf.
+     * @param ball active match ball
+     * @return true if this power handled the ground bounce, false for standard bounce
+     */
+    public boolean onGroundBounce(Ball ball) {
+        return false;
+    }
+
+    /**
+     * Creates the status effect applied when this power shot hits an opponent.
+     * @param pushDir push direction (+1 right, -1 left)
+     * @return matching status effect instance
+     */
+    public StatusEffect createStatusEffect(int pushDir) {
+        return AbstractStatusEffect.createByName(effectName, getEffectDurationTicks(), pushDir);
     }
 
     /** Activates the power aura on the owning player. */

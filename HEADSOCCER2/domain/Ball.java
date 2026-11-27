@@ -96,22 +96,33 @@ public class Ball implements Serializable {
         this.activePowerShot = power;
         this.powerShotOwner = owner;
         this.powerShotFlightTicks = power.getEffectDurationTicks();
-
-        double vx = power.getShotSpeedX() * direction;
-        double vy = power.getShotSpeedY();
-        setVelocity(vx, vy);
-
         this.decoyBalls.clear();
         this.illusionTicks = 0;
-        if (Power.POWER_ILUSION.equals(power.getName())) {
-            this.illusionTicks = power.getEffectDurationTicks();
-            double[] vyOffsets = {-4.5, -2.5, -1.0, 1.0, 2.5, 4.0, -5.5};
-            for (int i = 0; i < 7; i++) {
-                double dvx = vx * (0.86 + 0.05 * (i % 3));
-                double dvy = vy + vyOffsets[i];
-                decoyBalls.add(new double[]{positionX, positionY, dvx, dvy});
-            }
+        power.onLaunch(this, direction);
+    }
+
+    /**
+     * Spawns seven identical decoy balls for confusion power shots.
+     * @param durationTicks duration in simulation ticks
+     */
+    public void spawnIllusionDecoys(int durationTicks) {
+        this.illusionTicks = durationTicks;
+        double[] vyOffsets = {-4.5, -2.5, -1.0, 1.0, 2.5, 4.0, -5.5};
+        for (int i = 0; i < 7; i++) {
+            double dvx = velocityX * (0.86 + 0.05 * (i % 3));
+            double dvy = velocityY + vyOffsets[i];
+            decoyBalls.add(new double[]{positionX, positionY, dvx, dvy});
         }
+    }
+
+    /**
+     * Applies one velocity step using vertical acceleration and horizontal drag.
+     * @param gravityDelta vertical acceleration added to velocityY
+     * @param horizontalFactor horizontal multiplier applied to velocityX
+     */
+    public void stepVelocity(double gravityDelta, double horizontalFactor) {
+        velocityY += gravityDelta;
+        velocityX *= horizontalFactor;
     }
 
     /** Clears the active power shot state after impact or rebound. */
@@ -138,7 +149,6 @@ public class Ball implements Serializable {
         double prevY = positionY;
         positionX += velocityX;
         positionY += velocityY;
-        rotationAngle += velocityX / RADIUS;
 
         tickPowerShotTimers();
         resolveWallAndFloorBounces(field);
@@ -150,29 +160,14 @@ public class Ball implements Serializable {
         capSpeed();
     }
 
-    /** Returns true when a Tornado power shot is currently in flight. */
-    private boolean isActiveTornadoShot() {
-        return activePowerShot != null && powerShotFlightTicks > 0
-                && Power.POWER_TORNADO.equals(activePowerShot.getName());
-    }
-
     /**
      * Applies gravity and aerodynamic drag according to the active shot type.
      */
     private void applyGravityAndAirFriction() {
-        boolean isStraightPower = activePowerShot != null && powerShotFlightTicks > 0
-                && (Power.POWER_AURA_AZUL.equals(activePowerShot.getName())
-                || Power.POWER_RAYO.equals(activePowerShot.getName()));
-
-        if (isStraightPower) {
-            velocityY += 0.05;
-            velocityX *= 0.997;
-        } else if (isActiveTornadoShot()) {
-            velocityY += GRAVITY * 1.4;
-            velocityX *= 0.995;
+        if (activePowerShot != null && powerShotFlightTicks > 0) {
+            activePowerShot.applyFlightPhysics(this, GRAVITY, AIR_FRICTION);
         } else {
-            velocityY += GRAVITY;
-            velocityX *= AIR_FRICTION;
+            stepVelocity(GRAVITY, AIR_FRICTION);
         }
     }
 
@@ -211,9 +206,7 @@ public class Ball implements Serializable {
 
         if (positionY + RADIUS > groundY) {
             positionY = groundY - RADIUS;
-            if (isActiveTornadoShot()) {
-                velocityY = -7.5;
-            } else {
+            if (activePowerShot == null || powerShotFlightTicks <= 0 || !activePowerShot.onGroundBounce(this)) {
                 velocityY = -Math.abs(velocityY) * BOUNCE;
                 if (Math.abs(velocityY) < 1.1) {
                     velocityY = 0;

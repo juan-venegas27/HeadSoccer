@@ -1,11 +1,11 @@
 package presentation;
 
+import domain.CharacterRegistry;
 import domain.Log;
 import domain.Power;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -66,32 +66,14 @@ public final class AssetManager {
     public static BufferedImage getCharacterHead(String country) {
         String key = (country != null) ? country : Power.COUNTRY_KOREA;
         if (!characterCache.containsKey(key)) {
-            BufferedImage head = loadImage(getCharacterFileName(key));
+            String fileName = CharacterRegistry.get(key).getImageFileName();
+            BufferedImage head = loadImage(fileName);
             if (head == null) {
                 head = createFallbackHead(128);
             }
             characterCache.put(key, head);
         }
         return characterCache.get(key);
-    }
-
-    /**
-     * Maps a country name to its character head PNG filename.
-     * @param country selected country name
-     * @return image file name for the country character head
-     */
-    private static String getCharacterFileName(String country) {
-        String lower = country.toLowerCase();
-        if (lower.contains("camer")) {
-            return "cameroon.png";
-        }
-        if (lower.contains("nigeria")) {
-            return "nigeria.png";
-        }
-        if (lower.contains("estados") || lower.contains("usa")) {
-            return "usa.png";
-        }
-        return "korea.png";
     }
 
     /**
@@ -174,20 +156,16 @@ public final class AssetManager {
     }
 
     /**
-     * Draws a rotated soccer ball sprite centered at (x, y).
+     * Draws the static soccer ball image centered at (x, y).
      * @param g 2D graphics context used for drawing
      * @param x horizontal coordinate
      * @param y vertical coordinate
      * @param radius ball radius in pixels
-     * @param angle rotation angle in radians
      */
-    public static void drawRotatedBall(Graphics2D g, double x, double y, int radius, double angle) {
+    public static void drawBall(Graphics2D g, double x, double y, int radius) {
         BufferedImage img = getBallImage();
-        AffineTransform old = g.getTransform();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.translate(x, y);
-        g.rotate(angle);
-        g.drawImage(img, -radius, -radius, radius * 2, radius * 2, null);
-        g.setTransform(old);
+        int drawX = (int) Math.round(x) - radius;
+        int drawY = (int) Math.round(y) - radius;
+        g.drawImage(img, drawX, drawY, radius * 2, radius * 2, null);
     }
 }

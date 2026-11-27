@@ -1,5 +1,6 @@
 package presentation;
 
+import domain.CharacterRegistry;
 import domain.HeadSoccer;
 import domain.HeadSoccerException;
 import domain.MachinePlayer;
@@ -82,7 +83,7 @@ public class PlayerSelection extends JPanel {
         optionsBar.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
 
         modalityBox = new JComboBox<>(new String[]{"Jugador vs Jugador", "Jugador vs Máquina"});
-        profileBox = new JComboBox<>(MachinePlayer.PROFILES);
+        profileBox = new JComboBox<>(MachinePlayer.getAvailableProfiles());
         matchTypeBox = new JComboBox<>(new String[]{"Por Tiempo (min)", "Por Goles"});
         matchValueBox = new JComboBox<>(new Integer[]{1, 2, 3, 5, 7, 10});
         matchValueBox.setSelectedItem(3);
@@ -246,7 +247,7 @@ public class PlayerSelection extends JPanel {
             titleLabel.setForeground(Color.WHITE);
             header.add(titleLabel, BorderLayout.NORTH);
 
-            countryBox = new JComboBox<>(Power.AVAILABLE_COUNTRIES);
+            countryBox = new JComboBox<>(CharacterRegistry.getAvailableCountries());
             countryBox.setSelectedItem(initialCountry);
             countryBox.setFont(new Font("Arial", Font.BOLD, 13));
             countryBox.addActionListener(e -> onCountryChanged());

@@ -497,9 +497,10 @@ public class HeadSoccerTest {
         assertEquals(HeadSoccer.POINTS_LOSER, goalGame.getLastPointsPlayer2());
     }
 
-    /** Verifies that the Torpe machine AI profile runs without errors. */
+    /** Verifies that all four machine AI profiles run without errors. */
     @Test
     public void testMachinePlayerAllFourProfiles() {
+        assertEquals(4, MachinePlayer.PROFILES.length);
         for (String profile : MachinePlayer.PROFILES) {
             HeadSoccer game = new HeadSoccer(900, 540, HeadSoccer.MODE_PVM, profile,
                     Power.COUNTRY_KOREA, Power.COUNTRY_NIGERIA, HeadSoccer.MATCH_BY_TIME, 2, 5);
@@ -548,7 +549,7 @@ public class HeadSoccerTest {
             assertEquals(320.0, restoredPvp.getPlayer1().getPositionX(), 0.01);
 
             HeadSoccer pvm = new HeadSoccer(Field.RES_LARGE_WIDTH, Field.RES_LARGE_HEIGHT,
-                    HeadSoccer.MODE_PVM, MachinePlayer.PROFILE_TORPE,
+                    HeadSoccer.MODE_PVM, MachinePlayer.PROFILE_EXPERTA,
                     Power.COUNTRY_USA, Power.COUNTRY_NIGERIA,
                     HeadSoccer.MATCH_BY_GOALS, 3, 7);
             pvm.start();
@@ -560,7 +561,7 @@ public class HeadSoccerTest {
             assertEquals(1, restoredPvm.getScoreboard().getScorePlayer2());
             assertEquals(Power.COUNTRY_USA, restoredPvm.getPlayer1().getCountry());
             assertTrue(restoredPvm.getPlayer2() instanceof MachinePlayer);
-            assertEquals(MachinePlayer.PROFILE_TORPE, ((MachinePlayer) restoredPvm.getPlayer2()).getProfile());
+            assertEquals(MachinePlayer.PROFILE_EXPERTA, ((MachinePlayer) restoredPvm.getPlayer2()).getProfile());
 
             try {
                 HeadSoccer.open(null);
@@ -1083,37 +1084,110 @@ public class HeadSoccerTest {
         }
     }
 
-    /** Verifies Torpe machine actions, field bounds, null-ball reset, and profile normalization. */
+    /** Verifies Defensiva retreat, Ofensiva pursuit, Experta confusion handling, and null fallback. */
     @Test
     public void testMachinePlayerDefensiveAndOffensiveBehavior() {
         Field field = new Field(900, 540);
         Scoreboard sb = new Scoreboard();
         Player human = new Player(200, 452, Color.BLUE, "P1", Power.createForCountry(Power.COUNTRY_USA), 1);
 
-        MachinePlayer torpeAi = new MachinePlayer(500, 452, Color.RED, "CPU",
-                Power.createForCountry(Power.COUNTRY_NIGERIA), -1, "torpe");
-        assertEquals(MachinePlayer.PROFILE_TORPE, torpeAi.getProfile());
+        MachinePlayer defAi = new MachinePlayer(500, 452, Color.RED, "CPU",
+                Power.createForCountry(Power.COUNTRY_NIGERIA), -1, "defensiva");
+        assertEquals(MachinePlayer.PROFILE_DEFENSIVA, defAi.getProfile());
 
         Ball ball = new Ball(200, 450);
-        torpeAi.setPowerBar(100);
-        for (int i = 0; i < 60; i++) {
-            torpeAi.decideAction(ball, human, field, sb);
-            torpeAi.update(field.getLeftGoalLine() + Player.HEAD_RADIUS,
+        for (int i = 0; i < 20; i++) {
+            defAi.decideAction(ball, human, field, sb);
+            defAi.update(field.getLeftGoalLine() + Player.HEAD_RADIUS,
                     field.getRightGoalLine() - Player.HEAD_RADIUS, field.getGroundY());
         }
-        assertTrue("Torpe AI must stay within field bounds",
-                torpeAi.getPositionX() >= field.getLeftGoalLine() + Player.HEAD_RADIUS
-                && torpeAi.getPositionX() <= field.getRightGoalLine() - Player.HEAD_RADIUS);
+        assertTrue("Defensive AI must move back toward its own goal", defAi.getPositionX() > 520.0);
 
-        torpeAi.setMovingRight(true);
-        torpeAi.decideAction(null, human, field, sb);
-        torpeAi.update(field.getLeftGoalLine() + Player.HEAD_RADIUS,
-                field.getRightGoalLine() - Player.HEAD_RADIUS, field.getGroundY());
-        assertEquals(0.0, torpeAi.getVelocityX(), 0.01);
+        MachinePlayer ofeAi = new MachinePlayer(700, 452, Color.RED, "CPU",
+                Power.createForCountry(Power.COUNTRY_KOREA), -1, "ofensiva");
+        assertEquals(MachinePlayer.PROFILE_OFENSIVA, ofeAi.getProfile());
+        for (int i = 0; i < 20; i++) {
+            ofeAi.decideAction(ball, human, field, sb);
+            ofeAi.update(field.getLeftGoalLine() + Player.HEAD_RADIUS,
+                    field.getRightGoalLine() - Player.HEAD_RADIUS, field.getGroundY());
+        }
+        assertTrue("Offensive AI must advance toward ball", ofeAi.getPositionX() < 650.0);
+
+        MachinePlayer expAi = new MachinePlayer(700, 452, Color.RED, "CPU",
+                Power.createForCountry(Power.COUNTRY_CAMEROON), -1, "experta");
+        assertEquals(MachinePlayer.PROFILE_EXPERTA, expAi.getProfile());
+        sb.scoreGoalPlayer1();
+        human.setPowerBar(100);
+        human.activatePower();
+        human.executePowerShot(ball);
+        expAi.applyEffect(Power.EFFECT_CONFUSION, 150, 1);
+
+        for (int i = 0; i < 20; i++) {
+            expAi.decideAction(ball, human, field, sb);
+            expAi.update(field.getLeftGoalLine() + Player.HEAD_RADIUS,
+                    field.getRightGoalLine() - Player.HEAD_RADIUS, field.getGroundY());
+        }
+        assertTrue("Confused AI must keep valid X within field bounds",
+                expAi.getPositionX() >= field.getLeftGoalLine() + Player.HEAD_RADIUS);
 
         MachinePlayer defaultAi = new MachinePlayer(700, 452, Color.RED, "CPU",
                 Power.createForCountry(Power.COUNTRY_KOREA), -1, null);
         assertEquals(MachinePlayer.PROFILE_TORPE, defaultAi.getProfile());
+    }
+
+    /** Verifies runtime registration of custom characters, powers, status effects, and AI strategies. */
+    @Test
+    public void testExtensibilityCustomCharacterPowerEffectAndStrategy() {
+        String customCountry = "BrasilTest";
+        String customProfile = "EstrategiaCustom";
+        try {
+            StatusEffect customEffect = new ConfusionEffect("Congelado", 60) {
+                @Override
+                public double getSpeedMultiplier() {
+                    return 0.25;
+                }
+            };
+            Power customPower = new Power("SambaShot", customCountry, "Congelado", 1.0, 45, 18.0, -2.0) {
+                @Override
+                public StatusEffect createStatusEffect(int pushDir) {
+                    return customEffect;
+                }
+            };
+            CharacterRegistry.register(new CharacterDefinition(
+                    customCountry, "korea.png", Color.GREEN, () -> customPower));
+            MachinePlayer.registerStrategy(customProfile, () -> new MachineStrategy() {
+                @Override
+                public String getProfileName() {
+                    return customProfile;
+                }
+
+                @Override
+                public void decideAction(MachinePlayer self, Ball ball, Player opponent,
+                                         Field field, Scoreboard scoreboard) {
+                    self.setMovingLeft(true);
+                }
+            });
+
+            Power resolved = Power.createForCountry(customCountry);
+            assertEquals("SambaShot", resolved.getName());
+            assertEquals(Color.GREEN, CharacterRegistry.get(customCountry).getAuraColor());
+
+            Player target = new Player(450, 452, Color.BLUE, "P1", resolved, 1);
+            double baseSpeed = target.getEffectiveMoveSpeed();
+            target.applyEffect(resolved.createStatusEffect(1));
+            assertEquals("Congelado", target.getActiveEffect());
+            assertEquals(baseSpeed * 0.25, target.getEffectiveMoveSpeed(), 0.001);
+
+            MachinePlayer customBot = new MachinePlayer(600, 452, Color.RED, "CPU",
+                    resolved, -1, customProfile);
+            assertEquals(customProfile, customBot.getProfile());
+            customBot.decideAction(new Ball(300, 300), target, new Field(900, 540), new Scoreboard());
+            customBot.update(100, 800, 480);
+            assertTrue("Custom strategy must move machine player left", customBot.getPositionX() < 600.0);
+        } finally {
+            CharacterRegistry.unregister(customCountry);
+            MachinePlayer.unregisterStrategy(customProfile);
+        }
     }
 
     /** Verifies saveProgress and loadProgress round-trip accuracy and error cases. */
@@ -1194,5 +1268,181 @@ public class HeadSoccerTest {
         } finally {
             if (corrupted.exists()) corrupted.delete();
         }
+    }
+
+    /** Verifies dynamic FieldElement updates, ball/player collision callbacks, and deactivation cleanup. */
+    @Test
+    public void testFieldElementLifecycleBallAndPlayerInteractions() {
+        HeadSoccer game = new HeadSoccer(900, 540);
+        game.start();
+        Player p1 = game.getPlayer1();
+        Ball ball = game.getBall();
+        double elementX = 450.0;
+        double elementY = p1.getPositionY();
+        int[] counters = {0, 0, 0};
+
+        AbstractFieldElement boostPad = new AbstractFieldElement(
+                "Boost", elementX, elementY, 20, Color.ORANGE) {
+            @Override
+            public void update(HeadSoccer match) {
+                counters[0]++;
+            }
+
+            @Override
+            public void onBallTouch(Ball b, HeadSoccer match) {
+                counters[1]++;
+                b.setVelocity(0.0, -10.0);
+            }
+
+            @Override
+            public void onPlayerTouch(Player player, HeadSoccer match) {
+                counters[2]++;
+                player.setPowerBar(100.0);
+                deactivate();
+            }
+        };
+
+        game.addFieldElement(boostPad);
+        assertEquals(1, game.getFieldElements().size());
+
+        ball.setPosition(elementX, elementY);
+        ball.setVelocity(0.0, 0.0);
+        game.update();
+        assertTrue("FieldElement update must run on game update", counters[0] >= 1);
+        assertEquals("FieldElement must detect ball touch", 1, counters[1]);
+        assertTrue("Ball touch callback must bounce ball upward", ball.getVelocityY() < 0.0);
+        assertTrue("Element should remain active until deactivated", boostPad.isActive());
+
+        ball.setPosition(150.0, 120.0);
+        p1.setPositionX(elementX);
+        p1.setPowerBar(0.0);
+        game.update();
+        assertEquals("FieldElement must detect player touch", 1, counters[2]);
+        assertEquals(100.0, p1.getPowerBar(), 0.01);
+        assertFalse("Deactivated element must be marked inactive", boostPad.isActive());
+        assertTrue("Inactive elements must be removed automatically", game.getFieldElements().isEmpty());
+    }
+
+    /** Verifies polymorphic badge color, sparks, and vision confusion hooks on StatusEffect. */
+    @Test
+    public void testStatusEffectPolymorphicVisualAndConfusionHooks() {
+        StatusEffect push = new PushEffect(60, 1);
+        assertEquals(Color.CYAN, push.getBadgeColor());
+        assertFalse(push.showsSparks());
+        assertFalse(push.confusesVision());
+
+        StatusEffect elec = new ElectrocuteEffect(60);
+        assertEquals(new Color(255, 240, 50), elec.getBadgeColor());
+        assertTrue(elec.showsSparks());
+        assertFalse(elec.confusesVision());
+
+        StatusEffect unc = new UnconsciousEffect(60);
+        assertEquals(new Color(180, 240, 255), unc.getBadgeColor());
+        assertFalse(unc.showsSparks());
+
+        StatusEffect conf = new ConfusionEffect(60);
+        assertEquals(new Color(255, 160, 255), conf.getBadgeColor());
+        assertTrue(conf.confusesVision());
+
+        StatusEffect customMirage = new AbstractStatusEffect("Espejismo", 60) {
+            @Override
+            public Color getBadgeColor() {
+                return Color.MAGENTA;
+            }
+
+            @Override
+            public boolean showsSparks() {
+                return true;
+            }
+
+            @Override
+            public boolean confusesVision() {
+                return true;
+            }
+        };
+        assertEquals(Color.MAGENTA, customMirage.getBadgeColor());
+        assertTrue(customMirage.showsSparks());
+        assertTrue(customMirage.confusesVision());
+
+        Player human = new Player(200, 452, Color.BLUE, "P1", Power.createForCountry(Power.COUNTRY_USA), 1);
+        MachinePlayer cpu = new MachinePlayer(700, 452, Color.RED, "CPU",
+                Power.createForCountry(Power.COUNTRY_KOREA), -1, MachinePlayer.PROFILE_OFENSIVA);
+        Ball ball = new Ball(230, 400);
+        human.setPowerBar(100.0);
+        human.activatePower();
+        human.executePowerShot(ball);
+
+        cpu.applyEffect(customMirage);
+        assertSame(customMirage, cpu.getActiveStatusEffect());
+        assertEquals("Espejismo", cpu.getActiveEffect());
+        double[] perceived = cpu.getPerceivedBallPosition(ball);
+        boolean matchedDecoy = false;
+        for (double[] decoy : ball.getDecoyBalls()) {
+            if (Math.abs(perceived[0] - decoy[0]) < 0.001 && Math.abs(perceived[1] - decoy[1]) < 0.001) {
+                matchedDecoy = true;
+            }
+        }
+        assertTrue("Custom effect with confusesVision()=true must steer AI toward Illusion decoys", matchedDecoy);
+    }
+
+    /** Verifies custom MatchRule injection controls HUD text, clock behavior, and victory conditions. */
+    @Test
+    public void testCustomMatchRuleExtensibility() {
+        HeadSoccer game = new HeadSoccer(900, 540);
+        assertEquals("03:00", game.getMatchRule().getHudStatusText(game));
+
+        HeadSoccer goalsGame = new HeadSoccer(900, 540, HeadSoccer.MODE_PVP, null,
+                Power.COUNTRY_KOREA, Power.COUNTRY_CAMEROON, HeadSoccer.MATCH_BY_GOALS, 3, 4);
+        assertEquals("META: 4 GOLES", goalsGame.getMatchRule().getHudStatusText(goalsGame));
+
+        MatchRule goldenShotRule = new MatchRule() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public int getMatchTypeCode() {
+                return 99;
+            }
+
+            @Override
+            public boolean usesCountdownClock() {
+                return false;
+            }
+
+            @Override
+            public boolean onSecondElapsed(HeadSoccer match) {
+                return false;
+            }
+
+            @Override
+            public boolean shouldFinishAfterGoal(HeadSoccer match) {
+                return match.getScoreboard().getScorePlayer1() >= 1
+                        || match.getScoreboard().getScorePlayer2() >= 1;
+            }
+
+            @Override
+            public String getHudStatusText(HeadSoccer match) {
+                return "MODO CUSTOM";
+            }
+        };
+
+        game.setMatchRule(goldenShotRule);
+        game.start();
+        assertSame(goldenShotRule, game.getMatchRule());
+        assertEquals(99, game.getMatchType());
+        assertFalse(game.getMatchRule().usesCountdownClock());
+        assertEquals("MODO CUSTOM", game.getMatchRule().getHudStatusText(game));
+
+        game.tickSecond();
+        assertTrue("Custom rule must keep match running on second tick", game.isRunning());
+        assertFalse(game.isMatchFinished());
+
+        game.getBall().setPosition(game.getField().getRightGoalLine() + 5, game.getField().getGoalTop() + 40);
+        game.getBall().setVelocity(12, 0);
+        for (int i = 0; i < 85; i++) {
+            game.update();
+        }
+        assertTrue("Custom MatchRule must finish match after first goal freeze", game.isMatchFinished());
+        assertFalse(game.isRunning());
+        assertEquals(1, game.getScoreboard().getScorePlayer1());
     }
 }

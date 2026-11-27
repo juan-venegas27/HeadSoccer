@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /** Main game model coordinating the match, players, ball, field, and persistence. */
 public class HeadSoccer implements Serializable {
@@ -30,10 +33,12 @@ public class HeadSoccer implements Serializable {
     private final Ball ball;
     private final Field field;
     private final Scoreboard scoreboard;
+    private final List<FieldElement> fieldElements;
 
     private final int modality;
     private final int matchType;
     private final int targetGoals;
+    private MatchRule matchRule;
 
     private int remainingTime;
     private boolean suddenDeath;
@@ -89,7 +94,7 @@ public class HeadSoccer implements Serializable {
 
         this.player1 = new Player(p1x, py, new Color(40, 100, 220), "Jugador 1", power1, 1);
         if (this.modality == MODE_PVM) {
-            String prof = MachinePlayer.PROFILE_TORPE;
+            String prof = MachinePlayer.normalizeProfileName(machineProfile);
             this.player2 = new MachinePlayer(p2x, py, new Color(210, 50, 50),
                     "Máquina (" + prof + ")", power2, -1, prof);
         } else {
@@ -99,6 +104,10 @@ public class HeadSoccer implements Serializable {
         this.ball = new Ball(fieldWidth / 2.0, groundY - Ball.RADIUS * 4);
 
         this.scoreboard = new Scoreboard();
+        this.fieldElements = new ArrayList<>();
+        this.matchRule = (this.matchType == MATCH_BY_GOALS)
+                ? new GoalsMatchRule(this.targetGoals)
+                : new TimeMatchRule();
         this.remainingTime = Math.max(10, minutes * 60);
         this.suddenDeath = false;
         this.running = false;
@@ -175,6 +184,8 @@ public class HeadSoccer implements Serializable {
         resolvePlayerBallCollision(player1, player2);
         resolvePlayerBallCollision(player2, player1);
 
+        updateFieldElements();
+
         checkGoals();
     }
 
@@ -182,18 +193,11 @@ public class HeadSoccer implements Serializable {
      * Decrements the match clock and checks end-of-time conditions.
      */
     public void tickSecond() {
-        if (!running || paused) return;
-        if (matchType != MATCH_BY_TIME || suddenDeath) return;
-
-        if (remainingTime > 0) {
-            remainingTime--;
+        if (!running || paused) {
+            return;
         }
-        if (remainingTime == 0) {
-            if (scoreboard.getScorePlayer1() == scoreboard.getScorePlayer2()) {
-                suddenDeath = true;
-            } else {
-                finish();
-            }
+        if (matchRule.onSecondElapsed(this)) {
+            finish();
         }
     }
 
@@ -264,7 +268,7 @@ public class HeadSoccer implements Serializable {
             Power shot = ball.getActivePowerShot();
             player.takeDamage(shot.calculateDamage(opponent.getKickMultiplier()));
             int pushTowardOwnGoal = (player == player1) ? -1 : 1;
-            player.applyEffect(shot.getEffectName(), shot.getEffectDurationTicks(), pushTowardOwnGoal);
+            player.applyEffect(shot.createStatusEffect(pushTowardOwnGoal));
             ball.clearPowerShotImpact();
         }
     }
@@ -294,6 +298,47 @@ public class HeadSoccer implements Serializable {
     }
 
     /**
+     * Checks whether a circle overlaps the given field element.
+     * @param x center horizontal coordinate
+     * @param y center vertical coordinate
+     * @param radius circle radius in pixels
+     * @param element target field element
+     * @return true when the circle intersects the element bounds
+     */
+    private boolean isOverlappingElement(double x, double y, double radius, FieldElement element) {
+        double dx = x - element.getPositionX();
+        double dy = y - element.getPositionY();
+        double minDist = radius + element.getRadius();
+        return dx * dx + dy * dy <= minDist * minDist;
+    }
+
+    /**
+     * Updates active field elements and triggers ball or player touch callbacks.
+     */
+    private void updateFieldElements() {
+        fieldElements.removeIf(e -> e == null || !e.isActive());
+        for (FieldElement element : new ArrayList<>(fieldElements)) {
+            if (!element.isActive()) {
+                continue;
+            }
+            element.update(this);
+            if (element.isActive() && isOverlappingElement(
+                    ball.getPositionX(), ball.getPositionY(), Ball.RADIUS, element)) {
+                element.onBallTouch(ball, this);
+            }
+            if (element.isActive() && isOverlappingElement(
+                    player1.getPositionX(), player1.getPositionY(), Player.HEAD_RADIUS, element)) {
+                element.onPlayerTouch(player1, this);
+            }
+            if (element.isActive() && isOverlappingElement(
+                    player2.getPositionX(), player2.getPositionY(), Player.HEAD_RADIUS, element)) {
+                element.onPlayerTouch(player2, this);
+            }
+        }
+        fieldElements.removeIf(e -> e == null || !e.isActive());
+    }
+
+    /**
      * Checks if the ball entered either goal and updates scores and freeze state.
      */
     private void checkGoals() {
@@ -315,20 +360,13 @@ public class HeadSoccer implements Serializable {
     }
 
     /**
-     * Checks post-goal victory conditions for sudden death or target-goal matches.
+     * Checks post-goal victory conditions using the active match rule.
      * @return true if the match ended after the goal
      */
     private boolean checkPostGoalVictory() {
-        if (suddenDeath) {
+        if (matchRule.shouldFinishAfterGoal(this)) {
             finish();
             return true;
-        }
-        if (matchType == MATCH_BY_GOALS) {
-            if (scoreboard.getScorePlayer1() >= targetGoals ||
-                scoreboard.getScorePlayer2() >= targetGoals) {
-                finish();
-                return true;
-            }
         }
         return false;
     }
@@ -460,6 +498,53 @@ public class HeadSoccer implements Serializable {
         }
     }
 
+    /**
+     * Registers an active dynamic element into the arena.
+     * @param element field element to add
+     */
+    public void addFieldElement(FieldElement element) {
+        if (element != null && !fieldElements.contains(element)) {
+            fieldElements.add(element);
+        }
+    }
+
+    /**
+     * Removes the given dynamic element from the arena.
+     * @param element field element to remove
+     */
+    public void removeFieldElement(FieldElement element) {
+        fieldElements.remove(element);
+    }
+
+    /** Removes all dynamic elements from the arena. */
+    public void clearFieldElements() { fieldElements.clear(); }
+
+    /** Returns an unmodifiable view of active field elements. */
+    public List<FieldElement> getFieldElements() { return Collections.unmodifiableList(fieldElements); }
+
+    /** Decrements remaining match time by one second when positive. */
+    public void decrementRemainingTime() {
+        if (remainingTime > 0) {
+            remainingTime--;
+        }
+    }
+
+    /** Enables sudden death golden-goal overtime mode. */
+    public void activateSuddenDeath() { this.suddenDeath = true; }
+
+    /** Returns the active match victory and clock rule. */
+    public MatchRule getMatchRule() { return matchRule; }
+
+    /**
+     * Replaces the active match victory and clock rule.
+     * @param rule custom or built-in match rule
+     */
+    public void setMatchRule(MatchRule rule) {
+        if (rule != null) {
+            this.matchRule = rule;
+        }
+    }
+
     /** Returns true if the match is currently running. */
     public boolean isRunning() { return running; }
 
@@ -496,8 +581,8 @@ public class HeadSoccer implements Serializable {
     /** Returns match modality (PvP or PvM). */
     public int getModality() { return modality; }
 
-    /** Returns match type (by time or by goals). */
-    public int getMatchType() { return matchType; }
+    /** Returns match type code reported by the active rule. */
+    public int getMatchType() { return (matchRule != null) ? matchRule.getMatchTypeCode() : matchType; }
 
     /** Returns target goal limit for goal-based matches. */
     public int getTargetGoals() { return targetGoals; }

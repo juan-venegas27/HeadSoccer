@@ -226,6 +226,7 @@ public class GamePanel extends JPanel implements ActionListener {
         Field field = model.getField();
         drawField(g2, field);
         drawGoals(g2, field);
+        drawFieldElements(g2);
         drawPlayer(g2, model.getPlayer1());
         drawPlayer(g2, model.getPlayer2());
         drawBall(g2, model.getBall());
@@ -305,6 +306,35 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     /**
+     * Draws all active custom elements registered on the match arena.
+     * @param g 2D graphics context used for drawing
+     */
+    private void drawFieldElements(Graphics2D g) {
+        for (FieldElement element : model.getFieldElements()) {
+            if (!element.isActive()) {
+                continue;
+            }
+            int cx = (int) Math.round(element.getPositionX());
+            int cy = (int) Math.round(element.getPositionY());
+            int r = element.getRadius();
+            Color fill = (element.getDisplayColor() != null) ? element.getDisplayColor() : Color.ORANGE;
+            g.setColor(new Color(fill.getRed(), fill.getGreen(), fill.getBlue(), 190));
+            g.fillOval(cx - r, cy - r, r * 2, r * 2);
+            g.setColor(Color.WHITE);
+            g.setStroke(new BasicStroke(2f));
+            g.drawOval(cx - r, cy - r, r * 2, r * 2);
+            String label = element.getName();
+            if (label != null && !label.trim().isEmpty()) {
+                g.setFont(new Font("Arial", Font.BOLD, 10));
+                FontMetrics fm = g.getFontMetrics();
+                int tw = fm.stringWidth(label);
+                g.drawString(label, cx - tw / 2, cy + 4);
+            }
+        }
+        g.setStroke(new BasicStroke(1));
+    }
+
+    /**
      * Draws a player's head sprite, kicking foot, aura, and active status indicator.
      * @param g 2D graphics context used for drawing
      * @param player player instance to draw or update
@@ -325,13 +355,12 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         BufferedImage headImg = AssetManager.getCharacterHead(player.getCountry());
-        AffineTransform old = g.getTransform();
-        g.translate(cx, cy);
-        if (player.getFacingDirection() < 0) {
-            g.scale(-1, 1);
+        int headSize = (hr + 4) * 2;
+        if (player == model.getPlayer2()) {
+            g.drawImage(headImg, cx + hr + 4, cy - hr - 6, -headSize, headSize, null);
+        } else {
+            g.drawImage(headImg, cx - hr - 4, cy - hr - 6, headSize, headSize, null);
         }
-        g.drawImage(headImg, -hr - 4, -hr - 6, (hr + 4) * 2, (hr + 4) * 2, null);
-        g.setTransform(old);
 
         int fx = (int) player.getFootX();
         int fy = (int) player.getFootY();
@@ -357,22 +386,18 @@ public class GamePanel extends JPanel implements ActionListener {
      * @param hr player head radius in pixels
      */
     private void drawPlayerStatusEffect(Graphics2D g, Player player, int cx, int cy, int hr) {
+        StatusEffect effect = player.getActiveStatusEffect();
         if (player.isStunned()) {
             drawFloatingStatus(g, cx, cy - hr - 16, "★ ATURDIDO ★", Color.YELLOW);
-        } else if (player.getActiveEffect() != null) {
-            Color effColor = Color.CYAN;
-            if (Power.EFFECT_ELECTROCUTE.equals(player.getActiveEffect())) {
-                effColor = new Color(255, 240, 50);
+        } else if (effect != null) {
+            if (effect.showsSparks()) {
                 g.setColor(new Color(255, 255, 80, 180));
                 g.setStroke(new BasicStroke(2.5f));
                 g.drawLine(cx - hr, cy - 10, cx - hr + 8, cy);
                 g.drawLine(cx + hr, cy - 8, cx + hr - 8, cy + 5);
-            } else if (Power.EFFECT_UNCONSCIOUS.equals(player.getActiveEffect())) {
-                effColor = new Color(180, 240, 255);
-            } else if (Power.EFFECT_CONFUSION.equals(player.getActiveEffect())) {
-                effColor = new Color(255, 160, 255);
             }
-            drawFloatingStatus(g, cx, cy - hr - 16, player.getActiveEffect().toUpperCase(), effColor);
+            Color badgeColor = (effect.getBadgeColor() != null) ? effect.getBadgeColor() : Color.CYAN;
+            drawFloatingStatus(g, cx, cy - hr - 16, effect.getName().toUpperCase(), badgeColor);
         }
     }
 
@@ -400,12 +425,7 @@ public class GamePanel extends JPanel implements ActionListener {
      * @return visual aura color for the country
      */
     private Color getAuraColor(String country) {
-        if (country == null) return Color.CYAN;
-        String lower = country.toLowerCase();
-        if (lower.contains("camer")) return new Color(255, 230, 40);
-        if (lower.contains("nigeria")) return new Color(60, 235, 120);
-        if (lower.contains("estados") || lower.contains("usa")) return new Color(255, 90, 210);
-        return new Color(40, 170, 255);
+        return CharacterRegistry.get(country).getAuraColor();
     }
 
     /**
@@ -425,10 +445,10 @@ public class GamePanel extends JPanel implements ActionListener {
             g.fillOval((int) bx - br - 7, (int) by - br - 7, (br + 7) * 2, (br + 7) * 2);
         }
 
-        AssetManager.drawRotatedBall(g, bx, by, br, ball.getRotationAngle());
+        AssetManager.drawBall(g, bx, by, br);
 
         for (double[] d : decoys) {
-            AssetManager.drawRotatedBall(g, d[0], d[1], br, ball.getRotationAngle());
+            AssetManager.drawBall(g, d[0], d[1], br);
         }
     }
 
@@ -481,17 +501,10 @@ public class GamePanel extends JPanel implements ActionListener {
         g.setColor(Color.WHITE);
         g.drawString(scoreText, centerX - sfm.stringWidth(scoreText) / 2, 32);
 
-        String clockText;
-        Color clockColor = new Color(255, 215, 40);
-        if (model.isSuddenDeath()) {
-            clockText = "¡MUERTE SÚBITA!";
-            clockColor = new Color(255, 90, 90);
-        } else if (model.getMatchType() == HeadSoccer.MATCH_BY_GOALS) {
-            clockText = "META: " + model.getTargetGoals() + " GOLES";
-        } else {
-            int rem = model.getRemainingTime();
-            clockText = String.format("%02d:%02d", rem / 60, rem % 60);
-        }
+        String clockText = model.getMatchRule().getHudStatusText(model);
+        Color clockColor = model.isSuddenDeath()
+                ? new Color(255, 90, 90)
+                : new Color(255, 215, 40);
         g.setFont(new Font("Arial", Font.BOLD, 14));
         FontMetrics cfm = g.getFontMetrics();
         g.setColor(clockColor);

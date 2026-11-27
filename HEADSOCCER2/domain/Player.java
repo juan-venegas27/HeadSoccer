@@ -52,9 +52,7 @@ public class Player implements Serializable {
     private double currentHealth;
     private double powerBar;
     private int stunTicks;
-    private String activeEffect;
-    private int effectTicks;
-    private double effectVelocityX;
+    private StatusEffect activeEffect;
 
     /**
      * Creates a player with the given initial state and power.
@@ -92,8 +90,6 @@ public class Player implements Serializable {
         this.powerBar = 0.0;
         this.stunTicks = 0;
         this.activeEffect = null;
-        this.effectTicks = 0;
-        this.effectVelocityX = 0;
     }
 
     /**
@@ -120,15 +116,10 @@ public class Player implements Serializable {
             kickAnimTicks--;
         }
 
-        if (effectTicks > 0) {
-            effectTicks--;
-            if (Power.EFFECT_PUSH.equals(activeEffect)) {
-                velocityX = effectVelocityX;
-                effectVelocityX *= 0.92;
-            }
-            if (effectTicks == 0) {
+        if (activeEffect != null) {
+            activeEffect.onTick(this);
+            if (activeEffect.isExpired()) {
                 activeEffect = null;
-                effectVelocityX = 0;
             }
         }
     }
@@ -147,8 +138,7 @@ public class Player implements Serializable {
             return;
         }
 
-        if (!Power.EFFECT_UNCONSCIOUS.equals(activeEffect)
-                && !Power.EFFECT_PUSH.equals(activeEffect)) {
+        if (activeEffect == null || !activeEffect.overridesMovement()) {
             double moveSpeed = getEffectiveMoveSpeed();
             if (movingLeft && !movingRight) {
                 velocityX = -moveSpeed;
@@ -160,12 +150,10 @@ public class Player implements Serializable {
                 velocityX = 0;
             }
 
-            if (wantsToJump && onGround && !Power.EFFECT_ELECTROCUTE.equals(activeEffect)) {
+            if (wantsToJump && onGround && (activeEffect == null || !activeEffect.blocksJump())) {
                 velocityY = getEffectiveJumpForce();
                 onGround = false;
             }
-        } else if (Power.EFFECT_UNCONSCIOUS.equals(activeEffect)) {
-            velocityX *= 0.9;
         }
         wantsToJump = false;
     }
@@ -203,12 +191,12 @@ public class Player implements Serializable {
     /** Schedules a jump action on the next update. */
     public void jump() {
         if (!canAct()) return;
-        if (Power.EFFECT_ELECTROCUTE.equals(activeEffect)) return;
+        if (activeEffect != null && activeEffect.blocksJump()) return;
         wantsToJump = true;
     }
 
     /**
-     * 
+     * Sets leftward movement state.
      * @param moving true while directional movement key is held
      */
     public void setMovingLeft(boolean moving) {
@@ -216,7 +204,7 @@ public class Player implements Serializable {
     }
 
     /**
-     * 
+     * Sets rightward movement state.
      * @param moving true while directional movement key is held
      */
     public void setMovingRight(boolean moving) {
@@ -320,25 +308,47 @@ public class Player implements Serializable {
     }
 
     /**
-     * Applies a rival power effect to this player.
+     * Applies a polymorphic rival status effect object to this player.
+     * @param effect status effect instance to activate
+     */
+    public void applyEffect(StatusEffect effect) {
+        this.activeEffect = effect;
+        if (this.activeEffect != null) {
+            this.activeEffect.onApply(this);
+        }
+    }
+
+    /**
+     * Applies a rival power effect to this player by name.
      * @param effectName status effect identifier applied to rival
      * @param durationTicks effect duration in game ticks
      * @param pushDir push direction (+1 right, -1 left)
      */
     public void applyEffect(String effectName, int durationTicks, int pushDir) {
-        this.activeEffect = effectName;
-        this.effectTicks = Math.max(1, durationTicks);
-        this.effectVelocityX = 0;
+        applyEffect(AbstractStatusEffect.createByName(effectName, durationTicks, pushDir));
+    }
 
-        if (Power.EFFECT_PUSH.equals(effectName)) {
-            this.effectVelocityX = pushDir * 11.0;
-        } else if (Power.EFFECT_UNCONSCIOUS.equals(effectName)) {
-            this.velocityY = -12.5;
-            this.onGround = false;
-            this.movingLeft = false;
-            this.movingRight = false;
-            this.wantsToJump = false;
-        }
+    /** Returns internal raw horizontal velocity. */
+    public double getRawVelocityX() { return velocityX; }
+
+    /**
+     * Sets internal horizontal velocity directly for status effects.
+     * @param vx horizontal velocity component
+     */
+    public void setRawVelocityX(double vx) {
+        this.velocityX = vx;
+    }
+
+    /**
+     * Launches the player into the air and clears pending movement inputs.
+     * @param vy vertical launch velocity
+     */
+    public void launchUpward(double vy) {
+        this.velocityY = vy;
+        this.onGround = false;
+        this.movingLeft = false;
+        this.movingRight = false;
+        this.wantsToJump = false;
     }
 
     /**
@@ -475,16 +485,14 @@ public class Player implements Serializable {
         powerBar = 0.0;
         stunTicks = 0;
         activeEffect = null;
-        effectTicks = 0;
-        effectVelocityX = 0;
         if (power != null) {
             power.deactivate();
         }
     }
 
-    /** Returns true if player is not stunned and not unconscious. */
+    /** Returns true if player is not stunned and not blocked by an active effect. */
     public boolean canAct() {
-        return stunTicks <= 0 && !Power.EFFECT_UNCONSCIOUS.equals(activeEffect);
+        return stunTicks <= 0 && (activeEffect == null || !activeEffect.blocksAction());
     }
 
     /** Returns true if player is currently stunned. */
@@ -501,13 +509,13 @@ public class Player implements Serializable {
     }
 
     /**
-     * Returns effective horizontal speed considering Speed stat and Electrocuted effect.
-     * @return effective horizontal speed considering Speed stat and Electrocuted effect
+     * Returns effective horizontal speed considering Speed stat and active status effect.
+     * @return effective horizontal speed considering Speed stat and active status effect
      */
     public double getEffectiveMoveSpeed() {
         double speed = BASE_MOVE_SPEED * (1.0 + 0.10 * (speedStat - 1));
-        if (Power.EFFECT_ELECTROCUTE.equals(activeEffect)) {
-            speed *= 0.5;
+        if (activeEffect != null) {
+            speed *= activeEffect.getSpeedMultiplier();
         }
         return speed;
     }
@@ -518,7 +526,7 @@ public class Player implements Serializable {
     }
 
     /**
-     * 
+     * Sets horizontal centre position.
      * @param x horizontal coordinate
      */
     public void setPositionX(double x) { this.positionX = x; }
@@ -565,7 +573,7 @@ public class Player implements Serializable {
      * @return current effective horizontal velocity
      */
     public double getVelocityX() {
-        if (stunTicks > 0 || Power.EFFECT_UNCONSCIOUS.equals(activeEffect)) {
+        if (stunTicks > 0 || (activeEffect != null && activeEffect.overridesMovement())) {
             return velocityX;
         }
         if (movingLeft && !movingRight) return -getEffectiveMoveSpeed();
@@ -601,13 +609,18 @@ public class Player implements Serializable {
     public double getPowerBar() { return powerBar; }
 
     /**
-     * 
+     * Sets the power charge bar percentage clamped between 0 and 100.
      * @param value power bar value between 0 and 100
      */
     public void setPowerBar(double value) { this.powerBar = Math.max(0.0, Math.min(100.0, value)); }
 
     /** Returns currently active rival status effect name, or null. */
-    public String getActiveEffect() { return activeEffect; }
+    public String getActiveEffect() {
+        return (activeEffect != null) ? activeEffect.getName() : null;
+    }
+
+    /** Returns currently active StatusEffect instance, or null. */
+    public StatusEffect getActiveStatusEffect() { return activeEffect; }
 
     /** Returns current Speed statistic level. */
     public int getSpeedStat() { return speedStat; }
